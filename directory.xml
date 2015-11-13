@@ -1,0 +1,46 @@
+<accession number="ua000-jill_sample-12">
+  <profile>
+    <notes/>
+    <creator/>
+    <creatorId/>
+    <donor/>
+    <role/>
+    <email/>
+    <office/>
+    <address1/>
+    <address2/>
+    <address3/>
+    <method/>
+    <location/>
+  </profile>
+  <folder name="Death Penalty Exhibit - April 2015" check="True">
+    <id>318a75f7-3c5b-43a5-a6e2-783a13cbd96a</id>
+    <description/>
+    <access/>
+    <file name="Greg captions case 1.docx" check="False">
+      <id>734f0d61-ee58-4e91-be0c-129de9edefd4</id>
+      <description/>
+      <access/>
+    </file>
+    <file name="Greg captions case 5.docx" check="True">
+      <id>66015303-b943-4e11-a3a0-981c0115d043</id>
+      <description/>
+      <access/>
+    </file>
+    <file name="Greg captions wall case2 upright case4.docx" check="True">
+      <id>329935d0-7728-48d5-91b2-b1f772c4a44b</id>
+      <description/>
+      <access/>
+    </file>
+    <file name="tent_card_Case_1_women_juveniles.docx" check="True">
+      <id>e16542bd-f75a-4961-a91e-50778eec8ba8</id>
+      <description>qsqw</description>
+      <access>qwdqwd</access>
+    </file>
+    <file name="tent_card_Case_5_academic_debate.docx" check="False">
+      <id>f6065b0b-4bf7-4536-b9b8-ea325c2e7565</id>
+      <description/>
+      <access/>
+    </file>
+  </folder>
+</accession>
