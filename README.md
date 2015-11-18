@@ -4,6 +4,8 @@ Developed for records creators to described files, package them, and transfer th
 
 Will make use of basic digital forensics tools to gather basic filesystem metadata and create a robust SIP in records' native environement before transfer.
 
+Executable should run by itself with no dependencies
+
 Developed for Windows and NTFS filesystems
 
 Currently only a working demo with GUI that transfers files over local or network path.
