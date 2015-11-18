@@ -321,6 +321,7 @@ class mainFrame ( wx.Frame ):
 		self.transferBtn.Bind( wx.EVT_BUTTON, self.transferFiles )
 		self.creatorUpdateBtn.Bind( wx.EVT_BUTTON, self.updateConfig )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
+		
 	
 	def __del__( self ):
 		pass

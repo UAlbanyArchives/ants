@@ -35,9 +35,11 @@ class ANTSFrame(gui.mainFrame):
 		
 		#read config
 		if not os.path.isfile("config.xml"):
-			antsConfigXML = ET.Element(antsConfigXML)
-			accessionCount = ET.SubElement(antsConfigXML, 'accessionCount')
-			creatorXML = ET.SubElement(antsConfigXML, 'creatorXML')
+			antsConfigXML = ET.Element('antsConfig')
+			accessionCount = ET.Element('accessionCount')
+			accessionCount.text = "0"
+			antsConfigXML.append(accessionCount)
+			creatorXML = ET.SubElement(antsConfigXML, 'creator')
 			creatorIdXML = ET.SubElement(antsConfigXML, 'creatorId')
 			donorXML = ET.SubElement(antsConfigXML, 'donor')
 			roleXML = ET.SubElement(antsConfigXML, 'role')
@@ -64,13 +66,15 @@ class ANTSFrame(gui.mainFrame):
 		#read directory
 		try:
 			rootXML = ET.Element('accession')
-			if config.find('accessionCount').text:
+			if config.find('accessionCount') is None:
+				config.find('accessionCount').text = "0"
+			elif config.find('accessionCount').text:
 				pass
 			else:
 				config.find('accessionCount').text = "0"
 			accessionCount = int(config.find('accessionCount').text) + 1
-			donorNormal = config.find('donor').text.lower().strip().replace(" ", "_")
-			rootXML.set('number', config.find('creatorId').text + "-" + donorNormal + "-" + str(accessionCount))
+			donorNormal = self.readXML(config, "donor").lower().strip().replace(" ", "_")
+			rootXML.set('number', self.readXML(config, "creatorId") + "-" + donorNormal + "-" + str(accessionCount))
 			profileXML = ET.SubElement(rootXML, "profile")
 			notesXML = ET.SubElement(profileXML, "notes")
 			creatorXML = ET.SubElement(profileXML, "creator")
@@ -137,11 +141,11 @@ class ANTSFrame(gui.mainFrame):
 	
 	
 	def readXML(self, element, field):
-			if element.find(field).text:
-				value = element.find(field).text
-			else:
-				value =""
-			return value
+		if element.find(field).text:
+			value = element.find(field).text
+		else:
+			value =""
+		return value
 	
 	def updateConfig(self, event):
 		configXML = "config.xml"
@@ -362,6 +366,9 @@ class ANTSFrame(gui.mainFrame):
 			if len(locationText) < 1:
 				netwError = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Transfer Location Error', wx.OK | wx.ICON_EXCLAMATION)
 				netwError.ShowModal()
+			elif not os.path.isdir(locationText):
+				netwError = wx.MessageDialog(None, 'The network or location path you entered does not exist.', 'Transfer Location Error', wx.OK | wx.ICON_EXCLAMATION)
+				netwError.ShowModal()
 			else:
 				recordsCount = dirXML.xpath("count(//folder[@check='True']|//file[@check='True'])")
 				progressGoal = recordsCount + 7
@@ -492,7 +499,7 @@ class ANTSFrame(gui.mainFrame):
 				else:
 					print "didn't reach processGoal"
 					self.Close()
-				
+					
 	
 	
 		
@@ -518,9 +525,12 @@ class spashDialog( wx.Dialog ):
 		
 		bSizer2.Add( self.m_staticText1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
 		
-		self.m_staticText2 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"ANTS packages and transfers records as files while documenting their authenticity \nand integrity using digital forensics tools. Select a folder to transfer below.", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText2 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"ANTS gathers metadata and packages files for transfer to an institutional archives.", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText3 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Select a folder to transfer.", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText2.Wrap( -1 )
+		self.m_staticText3.Wrap( -1 )
 		bSizer2.Add( self.m_staticText2, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		bSizer2.Add( self.m_staticText3, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
 		
 		self.m_button1 = wx.Button( self.m_panel1, wx.ID_ANY, u"Browse...", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer2.Add( self.m_button1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
@@ -539,10 +549,24 @@ class spashDialog( wx.Dialog ):
 		
 		bSizer3.Add( bSizer5, 1, wx.EXPAND, 5 )
 		
-		bSizer4 = wx.BoxSizer( wx.VERTICAL )
+		bSizer4 = wx.BoxSizer( wx.HORIZONTAL )
+		bSizer48 = wx.BoxSizer( wx.VERTICAL )
+		bSizer49 = wx.BoxSizer( wx.VERTICAL )
+		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		bSizer4.Add( bSizer48, 1, wx.EXPAND, 5 )
+		bSizer4.Add( bSizer49, 1, wx.EXPAND, 5 )
 		
-		self.m_hyperlink2 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, u"GNU Licence", u"http://www.wxformbuilder.org", wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
-		bSizer4.Add( self.m_hyperlink2, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
+		self.m_hyperlink3 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, u"Credits", wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
+		bSizer48.Add( self.m_hyperlink3, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
+		
+		self.m_hyperlink2 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, u"Licence", wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
+		bSizer49.Add( self.m_hyperlink2, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
+		
+		self.m_hyperlink2.Bind( wx.EVT_HYPERLINK, self.openLicence)
+		self.m_hyperlink3.Bind( wx.EVT_HYPERLINK, self.openCredits)
+		self.Bind( wx.EVT_CLOSE, self.closeProgram )
 		
 		
 		bSizer3.Add( bSizer4, 1, wx.EXPAND, 5 )
@@ -566,10 +590,19 @@ class spashDialog( wx.Dialog ):
 		# Connect Events
 		self.m_button1.Bind( wx.EVT_BUTTON, self.runANTS )
 	
+	def openLicence(self, event):
+		os.system("notepad.exe LICENSE.txt")
+	
+	def openCredits(self, event):
+		wx.MessageBox('Credits here', 'Info',  wx.OK | wx.ICON_INFORMATION)
+		
+	def closeProgram(self, event):
+		sys.exit()
+	
 	
 	# Virtual event handlers, overide them in your derived class
 	def runANTS( self, event ):
-		self.Close()
+		self.Destroy()
 
 		
  
