@@ -32,7 +32,16 @@ class mainFrame ( wx.Frame ):
 		self.mainNotebook = wx.Notebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.fileTab = wx.Panel( self.mainNotebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		self.fileTab.SetBackgroundColour(wx.Colour(255, 255, 255, 255))
+		
+		bSizer99 = wx.BoxSizer( wx.VERTICAL )	
+		self.instructText = wx.StaticText( self.fileTab, wx.ID_ANY, u"Click on the directory to describe the records you want to transfer:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fileFont = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+		self.instructText.SetFont(fileFont)
+		self.instructText.Wrap( -1 )
+		bSizer99.Add( self.instructText, 0, wx.ALL|wx.ALIGN_LEFT, 5 )
+		
 		bSizer4 = wx.BoxSizer( wx.HORIZONTAL )
+		bSizer99.Add( bSizer4, 1, wx.EXPAND, 5 )
 		
 		self.descDirCtrl = CT.CustomTreeCtrl( self.fileTab, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, agwStyle= wx.TR_DEFAULT_STYLE | CT.TR_FULL_ROW_HIGHLIGHT)
 		self.descDirCtrl.SetBackgroundColour(wx.Colour(255, 255, 255, 255))
@@ -67,8 +76,8 @@ class mainFrame ( wx.Frame ):
 		bSizer7 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer14 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.fileNameText = wx.StaticText( self.fileTab, wx.ID_ANY, u"Click on the directory to describe the records you want to transfer.", wx.DefaultPosition, wx.DefaultSize, 0 )
+		firstFile = os.path.basename(sourceDir)
+		self.fileNameText = wx.StaticText( self.fileTab, wx.ID_ANY, firstFile, wx.DefaultPosition, wx.DefaultSize, 0 )
 		fileFont = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
 		self.fileNameText.SetFont(fileFont)
 		self.fileNameText.Wrap( -1 )
@@ -78,16 +87,24 @@ class mainFrame ( wx.Frame ):
 		fgSizer6.SetFlexibleDirection( wx.BOTH )
 		fgSizer6.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_staticText12 = wx.StaticText( self.fileTab, wx.ID_ANY, u"Record Description", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText12 = wx.StaticText( self.fileTab, wx.ID_ANY, u"Record Description:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText12.Wrap( -1 )
 		fgSizer6.Add( self.m_staticText12, 0, wx.ALL, 5 )
 		
 		self.rcdDescInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,140 ), wx.TE_MULTILINE )
 		fgSizer6.Add( self.rcdDescInput, 0, wx.ALL, 5 )
 		
+		bSizer91 = wx.BoxSizer( wx.VERTICAL )
+		
 		self.m_staticText13 = wx.StaticText( self.fileTab, wx.ID_ANY, u"Access Concerns", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText13.Wrap( -1 )
-		fgSizer6.Add( self.m_staticText13, 0, wx.ALL, 5 )
+		bSizer91.Add( self.m_staticText13, 0, wx.ALL, 5 )
+		
+		self.m_button6 = wx.Button( self.fileTab, wx.ID_ANY, u"Options >", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer91.Add( self.m_button6, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		
+		
+		fgSizer6.Add( bSizer91, 1, wx.EXPAND, 5 )
 		
 		self.rcdAccessInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,140 ), wx.TE_MULTILINE )
 		fgSizer6.Add( self.rcdAccessInput, 0, wx.ALL, 5 )
@@ -121,9 +138,9 @@ class mainFrame ( wx.Frame ):
 		self.transferBtn = wx.Button( self.fileTab, wx.ID_ANY, u"Submit", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer12.Add( self.transferBtn, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
-		self.keepOriginalsCheck = wx.CheckBox( self.fileTab, wx.ID_ANY, u"Keep original files", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.keepOriginalsCheck.SetValue(True) 
-		bSizer12.Add( self.keepOriginalsCheck, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+		self.compressCheck = wx.CheckBox( self.fileTab, wx.ID_ANY, u"Compress files", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.compressCheck.SetValue(True) 
+		bSizer12.Add( self.compressCheck, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
 		
 		bSizer7.Add( bSizer12, 1, wx.EXPAND, 5 )
@@ -132,7 +149,7 @@ class mainFrame ( wx.Frame ):
 		bSizer4.Add( bSizer7, 1, wx.EXPAND, 5 )
 		
 		
-		self.fileTab.SetSizer( bSizer4 )
+		self.fileTab.SetSizer( bSizer99 )
 		self.fileTab.Layout()
 		bSizer4.Fit( self.fileTab )
 		self.mainNotebook.AddPage( self.fileTab, u"Files to Transfer", True )
@@ -300,6 +317,7 @@ class mainFrame ( wx.Frame ):
 		self.descDirCtrl.Bind( CT.EVT_TREE_ITEM_CHECKED, self.itemChecked )
 		self.rcdDescInput.Bind( wx.EVT_TEXT, self.updateRcrdDesc )
 		self.rcdAccessInput.Bind( wx.EVT_TEXT, self.updateRcrdAccess )
+		self.m_button6.Bind( wx.EVT_BUTTON, self.accessOptions )
 		self.transferBtn.Bind( wx.EVT_BUTTON, self.transferFiles )
 		self.creatorUpdateBtn.Bind( wx.EVT_BUTTON, self.updateConfig )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )

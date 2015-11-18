@@ -1,5 +1,5 @@
 <antsConfig>
-  <accessionCount>11</accessionCount>
+  <accessionCount>117</accessionCount>
   <creator>Office of the President</creator>
   <creatorId>ua000</creatorId>
   <donor>Jill Sample</donor>
@@ -10,7 +10,7 @@
   <address2>Albany, NY 12222</address2>
   <address3/>
   <transferMethod>network</transferMethod>
-  <transferLocation>C:\Projects\Stor\ants\destination</transferLocation>
+  <transferLocation>C:\Projects\ants\destination</transferLocation>
   <login/>
   <pw/>
 </antsConfig>

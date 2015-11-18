@@ -8,6 +8,7 @@ import base64
 from threading import Thread
 import shutil
 import bagit
+import zipfile
 
  
 #import the newly created GUI file
@@ -128,6 +129,8 @@ class ANTSFrame(gui.mainFrame):
 			self.errorDialog("Could not load GUI", exceptMsg, exceptLine)
  
 	def errorDialog(self, errorMsg, exceptMsg, exceptLine):
+		#except line is wrong
+		print exceptMsg
 		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg) + "\n" + "Line: " + str(exceptLine), "ERROR", wx.OK | wx.ICON_EXCLAMATION)
 		errorPopup.ShowModal()
 		sys.exit()
@@ -279,6 +282,21 @@ class ANTSFrame(gui.mainFrame):
 		file.write(descString)
 		file.close()
 		
+	def accessOptions(self, event):
+		#access concerns written by Chris Prom, "Email Transfer From" on his blog Practical E-Records:  http://e-records.chrisprom.com/email-transfer-form/#more-2809
+		options = ['Student records protected by FERPA', 'Personnel or employment records', 'Protected intellectual property or reseach', 'Records protected by attorney client privilege', 'Social Security numbers, Passwords or PINs', 'Credit Card numbers', 'Financial records', 'Medical records/HIPPA protected records', 'Licensed or pirated software', 'Other materials that have privacy concerns (please specify)']
+		recordName = self.fileNameText.GetLabel()
+		optionsMenu = wx.MultiChoiceDialog( self, recordName + " might contain:", "Access Concerns for this Record", options)
+		if optionsMenu.ShowModal() == wx.ID_OK:
+			selections = optionsMenu.GetSelections()
+			selectionList = []
+			for selection in selections:
+				selectionText = options[selection]
+				selectionList.append(selectionText)
+			selectionsOutput = ", \n".join(selectionList)
+			self.rcdAccessInput.AppendText(selectionsOutput)
+					
+		
 	def updateNotes(self, event):
 		dirFile = "directory.xml"
 		parser = ET.XMLParser(remove_blank_text=True)
@@ -345,80 +363,138 @@ class ANTSFrame(gui.mainFrame):
 				netwError = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Transfer Location Error', wx.OK | wx.ICON_EXCLAMATION)
 				netwError.ShowModal()
 			else:
-				recordsCount = dirXML.xpath("count(//folder|//file)")
-				progressGoal = recordsCount + 3
+				recordsCount = dirXML.xpath("count(//folder[@check='True']|//file[@check='True'])")
+				progressGoal = recordsCount + 7
 				print "stages: " + str(progressGoal)
-				progressMsgRoot = "Packaging your records and transferring them to the archives.\n"
-				progressMsg = progressMsgRoot + "Copying Files..."
-				networkProcessing = wx.ProgressDialog("ANTS: Archives Network Transfer System", progressMsg, maximum=progressGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
-				networkProcessing.ShowModal()
+				
+				self.progressCount = 0
+				self.progressMsgRoot = "Packaging your records and transferring them to the archives.\n"
+				self.progressMsg = self.progressMsgRoot
+				self.networkProcessing = wx.ProgressDialog("ANTS: Archives Network Transfer System", self.progressMsg, maximum=progressGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
+				self.networkProcessing.ShowModal()
+				
+				#moves directory while updating progress dialog for every file and folder
+				def countCopy(source, destination, dirXML):
+					for item in os.listdir(source):
+						path = os.path.join(source, item)
+						if path != destination:
+							pathFromSource = path.split(self.sourceDir + "\\")[1]
+							pathList = pathFromSource.split("\\")
+							pathLength = len(pathList)
+							pathString = "/accession/folder[@name='" + dirXML.find('folder').attrib['name'] + "']"
+							for pathPart in pathList:
+								if pathPart != pathList[pathLength - 1]:
+									pathString = pathString +  "/folder[@name='" + pathPart + "']"
+								else:
+									if os.path.isdir(path):
+										pathString = pathString +  "/folder[@name='" + pathPart + "']"
+									else:
+										pathString = pathString +  "/file[@name='" + pathPart + "']"							
+							itemXML = dirXML.xpath(pathString)[0]
+							if itemXML.attrib['check'] == "True":							
+								if os.path.isdir(path):
+									self.progressMsg = self.progressMsgRoot + "Gathering " + item
+									self.networkProcessing.Update(self.progressCount, self.progressMsg)
+									os.makedirs(os.path.join(destination, item))
+									shutil.copystat(path, os.path.join(destination, item))
+									self.progressCount = self.progressCount + 1
+									self.networkProcessing.Update(self.progressCount, self.progressMsg)
+									countCopy(path, os.path.join(destination, item), dirXML)
+								elif os.path.isfile(path):
+									self.progressMsg = self.progressMsgRoot + "Gathering " + item
+									self.networkProcessing.Update(self.progressCount, self.progressMsg)
+									shutil.copy2(path, destination)
+									self.progressCount = self.progressCount + 1
+									self.networkProcessing.Update(self.progressCount, self.progressMsg)
+								else:
+									print "error: " + path
 				
 				#run forensics tools
+				self.progressMsg = self.progressMsgRoot + "Gathering metadata..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				#do stuff
+				self.progressCount = self.progressCount + 1
 				
-				
-				#make a temp directory and move selected files there
-				
+				#move files to new directory
+				self.progressMsg = self.progressMsgRoot + "Gathering files..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				accessionNumber = dirXML.attrib['number']
+				os.makedirs(os.path.join(self.sourceDir, accessionNumber))
+				bagDir = os.path.join(self.sourceDir, accessionNumber)
+				countCopy(self.sourceDir, bagDir, dirXML)
 				
 				#bag directory
-			
+				self.progressMsg = self.progressMsgRoot + "Bagging files..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				bagInfo = {'Contact-Name': donorText}
+				bag = bagit.make_bag(bagDir, bagInfo)	
+				self.progressCount = self.progressCount + 1
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
 				
-				#update bag manifests
-				
-				
-				#copy bag to destination
-				
-				progressCount = 0
-				newPath = locationText + "\\" + dirXML.attrib["number"]
-				shutil.copytree(self.sourceDir, newPath)
-				progressCount = progressCount + 1
-				progressMsg = progressMsgRoot + "Reading directory..."
-				networkProcessing.Update(progressCount, progressMsg)
-				
+								
+				#remove unwanted files from XML
+				self.progressMsg = self.progressMsgRoot + "Removing records of unwanted files..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
 				for record in dirXML.iter():
 					if 'name' in record.attrib:
-						progressCount = progressCount + 1
-						progressMsg = progressMsgRoot + "Reading " + record.attrib['name'] + "..."
-						networkProcessing.Update(progressCount, progressMsg)
 						#remove uncheck records from XML directory
 						if record.attrib["check"] == "False":
-							for item in os.listdir(newPath):
-								itempath = os.path.join(newPath, item)
-								if item == record.attrib["name"]:
-									if record.tag == "folder":
-										if os.path.isdir(itempath):
-											shutil.rmtree(itempath)
-									elif record.tag == "file":
-										if os.path.isfile(itempath):
-											os.remove(itempath)
 							record.getparent().remove(record)
-							#_____________________________________<---loop stops here for some reason
 						#else remove check attribute
 						elif record.attrib["check"] == "True":
 							record.attrib.pop('check')
 						else:
 							print "XML DIRECTORY ERROR"
-				
-				bag = bagit.make_bag(newPath, {'Contact-Name': donorText})	
-				progressCount = progressCount + 1
-				progressMsg = progressMsgRoot + "Bagging files..."
-				networkProcessing.Update(progressCount, progressMsg)
-				
-				#write XML to file
+							
+				#write XML to file and update bag manifests
+				self.progressMsg = self.progressMsgRoot + "Writing metadata and finalizing manifests..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
 				descString = ET.tostring(dirXML, pretty_print=True)	
-				file = open(locationText + "\\" + dirXML.attrib["number"] + ".xml", "w")
+				file = open(bagDir + "\\" + dirXML.attrib["number"] + ".xml", "w")
 				file.write(descString)
 				file.close()
-				progressCount = progressCount + 1
-				networkProcessing.Destroy()
-				
-				
-				if progressCount >= progressGoal:
-					self.Close()
+				os.remove("directory.xml")
+				bag.save(manifests=True)
+				self.progressCount = self.progressCount + 1
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
 
 				
+				
+				#compress bag?
+				if self.compressCheck.IsChecked() is True:
+					self.progressMsg = self.progressMsgRoot + "Compressing data..."
+					self.networkProcessing.Update(self.progressCount, self.progressMsg)
+					finalPackage = shutil.make_archive(bagDir, 'zip', bagDir)
+					shutil.rmtree(bagDir)
+					self.progressCount = self.progressCount + 1
+					self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				else:
+					finalPackage = bagDir
+				
+				
+				#copy bag to destination
+				self.progressMsg = self.progressMsgRoot + "Transfering to the Archives..."
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				if os.path.isdir(finalPackage):
+					shutil.copytree(finalPackage, locationText)
+					shutil.rmtree(finalPackage)
+				elif os.path.isfile(finalPackage):
+					shutil.copy2(finalPackage, locationText)
+					os.remove(finalPackage)
+				self.progressCount = self.progressCount + 1
+				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				
+				
+				
+				
+				if self.progressCount >= progressGoal:
+					self.Close()
+				else:
+					print "didn't reach processGoal"
+					self.Close()
+				
 	
 	
-		
 		
 ################################################################################################################	
 class spashDialog( wx.Dialog ):
