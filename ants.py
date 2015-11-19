@@ -391,12 +391,12 @@ class ANTSFrame(gui.mainFrame):
 							pathString = "/accession/folder[@name='" + dirXML.find('folder').attrib['name'] + "']"
 							for pathPart in pathList:
 								if pathPart != pathList[pathLength - 1]:
-									pathString = pathString +  "/folder[@name='" + pathPart + "']"
+									pathString = pathString +  "/folder[@name=\"" + pathPart + "\"]"
 								else:
 									if os.path.isdir(path):
-										pathString = pathString +  "/folder[@name='" + pathPart + "']"
+										pathString = pathString +  "/folder[@name=\"" + pathPart + "\"]"
 									else:
-										pathString = pathString +  "/file[@name='" + pathPart + "']"							
+										pathString = pathString +  "/file[@name=\"" + pathPart + "\"]"							
 							itemXML = dirXML.xpath(pathString)[0]
 							if itemXML.attrib['check'] == "True":							
 								if os.path.isdir(path):
