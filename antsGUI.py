@@ -24,7 +24,7 @@ class mainFrame ( wx.Frame ):
 		displaySize= wx.DisplaySize()
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"ANTS: Archives Network Transfer System", pos = wx.DefaultPosition, size=(displaySize[0]/1.45, displaySize[1]/1.30), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		self.SetBackgroundColour(wx.Colour(221, 221, 221, 255))
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints(400,650)
 		self.sourceDir = sourceDir
 		
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
@@ -237,7 +237,7 @@ class mainFrame ( wx.Frame ):
 		
 		bSizer2.Add( fgSizer3, 1, wx.EXPAND, 5 )
 		
-		self.creatorUpdateBtn = wx.Button( self.creatorTab, wx.ID_ANY, u"Set Default", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.creatorUpdateBtn = wx.Button( self.creatorTab, wx.ID_ANY, u"Set as Default", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer2.Add( self.creatorUpdateBtn, 0, wx.ALL, 5 )
 		
 		
@@ -288,20 +288,64 @@ class mainFrame ( wx.Frame ):
 		
 		bSizer3.Add( fgSizer9, 1, wx.EXPAND, 5 )
 		
-		self.m_button9 = wx.Button( self.transferTab, wx.ID_ANY, u"Set Default", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		compressOptionChoices = [ u"ZIP", u"TAR.GZIP" ]
+		self.compressOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Compression", wx.DefaultPosition, wx.DefaultSize, compressOptionChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["compress"].lower() == "gzip":
+			self.compressOption.SetSelection( 1 )
+		else:
+			self.compressOption.SetSelection( 0 )
+		bSizer10.Add( self.compressOption, 0, wx.ALL, 5 )
+		
+		hashOptionChoices = [ u"MD5", u"SHA256" ]
+		self.hashOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Checksum", wx.DefaultPosition, wx.DefaultSize, hashOptionChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["checksum"].lower() == "sha256":
+			self.hashOption.SetSelection( 1 )
+		else:
+			self.hashOption.SetSelection( 0 )
+		bSizer10.Add( self.hashOption, 0, wx.ALL, 5 )
+		
+		receiptOptionChoices = [ u"HTML/Bootstrap", u"CSV", u"XML" ]
+		self.receiptOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Receipt Format", wx.DefaultPosition, wx.DefaultSize, receiptOptionChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["receipt"].lower() == "csv":
+			self.receiptOption.SetSelection( 1 )
+		elif configData["receipt"].lower() == "xml":
+			self.receiptOption.SetSelection( 2 )
+		else:
+			self.receiptOption.SetSelection( 0 )
+		bSizer10.Add( self.receiptOption, 0, wx.ALL, 5 )
+		
+		bSizer11 = wx.BoxSizer( wx.VERTICAL )
+		
+		
+		
+		self.m_button5 = wx.Button( self.transferTab, wx.ID_ANY, u"View Receipt", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer11.Add( self.m_button5, 0, wx.ALL, 5 )
+		
+		self.m_button61 = wx.Button( self.transferTab, wx.ID_ANY, u"Export Receipt", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer11.Add( self.m_button61, 0, wx.ALL, 5 )
+		
+		
+		bSizer10.Add( bSizer11, 1, wx.EXPAND, 5 )
+		
+		
+		bSizer3.Add( bSizer10, 1, wx.EXPAND, 5 )
+		
+		self.m_button9 = wx.Button( self.transferTab, wx.ID_ANY, u"Set as Default", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer3.Add( self.m_button9, 0, wx.ALL, 5 )
 		
 		
+		
+		
 		bSizer3.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		
-		
 		bSizer3.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
 		
 		self.transferTab.SetSizer( bSizer3 )
 		self.transferTab.Layout()
 		bSizer3.Fit( self.transferTab )
-		self.mainNotebook.AddPage( self.transferTab, u"Transfer Location", False )
+		self.mainNotebook.AddPage( self.transferTab, u"Options", False )
 		
 		bSizer1.Add( self.mainNotebook, 1, wx.EXPAND |wx.ALL, 5 )
 		
@@ -320,6 +364,8 @@ class mainFrame ( wx.Frame ):
 		self.m_button6.Bind( wx.EVT_BUTTON, self.accessOptions )
 		self.transferBtn.Bind( wx.EVT_BUTTON, self.transferFiles )
 		self.creatorUpdateBtn.Bind( wx.EVT_BUTTON, self.updateConfig )
+		self.m_button5.Bind( wx.EVT_BUTTON, self.viewReceipt )
+		self.m_button61.Bind( wx.EVT_BUTTON, self.saveReceipt )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
 		
 	
