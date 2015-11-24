@@ -260,7 +260,7 @@ class mainFrame ( wx.Frame ):
 			self.m_radioBox1.SetSelection( 0 )
 		bSizer3.Add( self.m_radioBox1, 0, wx.ALL, 5 )
 		
-		fgSizer9 = wx.FlexGridSizer( 3, 2, 0, 0 )
+		fgSizer9 = wx.FlexGridSizer( 4, 3, 0, 0 )
 		fgSizer9.SetFlexibleDirection( wx.BOTH )
 		fgSizer9.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -268,22 +268,39 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText18.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText18, 0, wx.ALL, 5 )
 		
-		self.transferLocInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["transferLocation"], wx.DefaultPosition, wx.Size( 200,-1 ), 0 )
+		self.transferLocInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["transferLocation"], wx.DefaultPosition, wx.Size( 250,-1 ), 0 )
 		fgSizer9.Add( self.transferLocInput, 0, wx.ALL, 5 )
+		
+		self.checkLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Location", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer9.Add( self.checkLocation, 0, wx.ALL, 5 )
+		
+		self.m_staticText21 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Receive Location (PATH or IP)", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText21.Wrap( -1 )
+		fgSizer9.Add( self.m_staticText21, 0, wx.ALL, 5 )
+		
+		self.receiveInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["receiveLocation"], wx.DefaultPosition, wx.Size( 250,-1 ) )
+		fgSizer9.Add( self.receiveInput, 0, wx.ALL, 5 )
+		
+		self.receiveFiles = wx.Button( self.transferTab, wx.ID_ANY, u"Receive Files", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer9.Add( self.receiveFiles, 0, wx.ALL, 5 )
 		
 		self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText19.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText19, 0, wx.ALL, 5 )
 		
-		self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 200,-1 ) )
+		self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 250,-1 ) )
 		fgSizer9.Add( self.loginInput, 0, wx.ALL, 5 )
+		
+		fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
 		self.m_staticText20 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Password (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText20.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText20, 0, wx.ALL, 5 )
 		
-		self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 200,-1 ), wx.TE_PASSWORD )
+		self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 250,-1 ), wx.TE_PASSWORD )
 		fgSizer9.Add( self.passwordInput, 0, wx.ALL, 5 )
+		
+		
 		
 		
 		bSizer3.Add( fgSizer9, 1, wx.EXPAND, 5 )
@@ -367,6 +384,7 @@ class mainFrame ( wx.Frame ):
 		self.m_button5.Bind( wx.EVT_BUTTON, self.viewReceipt )
 		self.m_button61.Bind( wx.EVT_BUTTON, self.saveReceipt )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
+		self.checkLocation.Bind( wx.EVT_BUTTON, self.testLocation )
 		
 	
 	def __del__( self ):

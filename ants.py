@@ -10,6 +10,7 @@ import shutil
 import bagit
 import zipfile
 import datetime
+import subprocess
 
  
 #import the newly created GUI file
@@ -55,6 +56,7 @@ class ANTSFrame(gui.mainFrame):
 			address3XML = ET.SubElement(antsConfigXML, 'address3')
 			transferMethodXML = ET.SubElement(antsConfigXML, 'transferMethod')
 			transferLocationXML = ET.SubElement(antsConfigXML, 'transferLocation')
+			receiveLocationXML = ET.SubElement(antsConfigXML, 'receiveLocation')
 			loginXML = ET.SubElement(antsConfigXML, 'login')
 			pwXML = ET.SubElement(antsConfigXML, 'pw')
 			compressXML = ET.SubElement(antsConfigXML, 'compress')
@@ -71,7 +73,7 @@ class ANTSFrame(gui.mainFrame):
 		parser = ET.XMLParser(remove_blank_text=True)
 		configParse = ET.parse(configXML, parser)
 		config = configParse.getroot()
-		configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
+		configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
 
 		
 		#read directory
@@ -156,7 +158,7 @@ class ANTSFrame(gui.mainFrame):
 		file = open("errorLog.txt", "a")
 		file.write(errorOutput)
 		file.close()
-		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_EXCLAMATION)
+		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
 		errorPopup.ShowModal()
 		sys.exit()
 	
@@ -188,6 +190,7 @@ class ANTSFrame(gui.mainFrame):
 			config.find('transferMethod').text = "network"
 		config.find('login').text = self.loginInput.GetValue()
 		config.find('transferLocation').text = self.transferLocInput.GetValue()
+		config.find('receiveLocation').text = self.receiveInput.GetValue()
 		config.find('pw').text = base64.b64encode(self.passwordInput.GetValue())
 		if self.compressOption.GetSelection() == 0:
 			config.find('compress').text = "zip"
@@ -199,7 +202,7 @@ class ANTSFrame(gui.mainFrame):
 			config.find('checksum').text = "sha256"
 		if self.receiptOption.GetSelection() == 0:
 			config.find('receipt').text = "html"
-		elif self.receiptOption.GetSelection() == 2:
+		elif self.receiptOption.GetSelection() == 1:
 			config.find('receipt').text = "csv"
 		else:
 			config.find('receipt').text = "xml"
@@ -335,7 +338,22 @@ class ANTSFrame(gui.mainFrame):
 			selectionsOutput = ", \n".join(selectionList)
 			self.rcdAccessInput.AppendText(selectionsOutput)
 					
-		
+	def testLocation(self, event):
+		location = self.transferLocInput.GetValue()
+		if not len(location) > 0:
+			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
+			noLoc.ShowModal()
+		else:
+			if self.m_radioBox1.GetSelection() == 0:
+				if os.path.isdir(location):
+					goodDir = wx.MessageDialog(None, 'The directory you entered is correct.', 'Found Directory', wx.OK | wx.ICON_INFORMATION)
+					goodDir.ShowModal()
+				else:
+					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
+					badDir.ShowModal()
+			else:
+				print location
+	
 	def updateNotes(self, event):
 		dirFile = "directory.xml"
 		parser = ET.XMLParser(remove_blank_text=True)
@@ -348,7 +366,7 @@ class ANTSFrame(gui.mainFrame):
 		file.write(descString)
 		file.close()
 		
-	def viewReceipt(self, event):
+	def buildReceipt(self, event):
 		import tempfile
 		tempDir = tempfile.mkdtemp()
 		if self.receiptOption.GetSelection() == 1:
@@ -368,20 +386,36 @@ class ANTSFrame(gui.mainFrame):
 						itemList = [number, submitted, item.find('type').text, item.find('name').text, item.find('path').text, item.find('id').text]
 						csv.writerow(itemList)
 			tempCSV.close()
-			os.system(os.path.join(tempDir, "receipt.csv"))
+			receiptFile = os.path.join(tempDir, "receipt.csv")
+			wildcard = "*.csv"
+			defaultFile = "receipt.csv"
 		elif self.receiptOption.GetSelection() == 2:
 			shutil.copy2("receipt.xml", tempDir)
-			os.system(os.path.join(tempDir, "receipt.xml"))
+			receiptFile = os.path.join(tempDir, "receipt.xml")
+			wildcard = "*.xml"
+			defaultFile = "receipt.xml"
 		else:
 			from html import htmlReceipt
 			htmlString = htmlReceipt("receipt.xml", str(datetime.datetime.now()), "config.xml")
 			htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
 			htmlFile.write(htmlString)
 			htmlFile.close()
-			os.system(os.path.join(tempDir, "receipt.html"))
+			receiptFile = os.path.join(tempDir, "receipt.html")
+			wildcard = "*.htm;*.html"
+			defaultFile = "receipt.html"
+		return receiptFile, wildcard, defaultFile
+	
+	def viewReceipt(self, event):
+		receiptFile,  wildcard, defaultFile = self.buildReceipt(self)
+		subprocess.Popen(receiptFile, shell=True)
 		
 	def saveReceipt(self, event):
-		print "test save"
+		receiptFile, wildcard, defaultFile = self.buildReceipt(self)
+		saveFile = wx.FileDialog(self, message="Save receipt as ...", defaultFile=defaultFile, wildcard=wildcard, style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT )
+		if saveFile.ShowModal() == wx.ID_OK:
+			path = saveFile.GetPath()
+			shutil.copy2(receiptFile, path)
+		saveFile.Destroy()
 		
 	def transferFiles(self, event):	
 		dirFile = "directory.xml"
@@ -650,6 +684,9 @@ class ANTSFrame(gui.mainFrame):
 					self.progressMsg = self.progressMsgRoot + "Transfering to the Archives..."
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
 					if os.path.isdir(finalPackage):
+						#copyCmd = "xcopy \"" + finalPackage + "\" \"" + os.path.join(locationText, accessionNumber) + "\""
+						#print copyCmd
+						#proc = subprocess.Popen(copyCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 						shutil.copytree(finalPackage, locationText)
 						shutil.rmtree(finalPackage)
 					elif os.path.isfile(finalPackage):
@@ -659,6 +696,8 @@ class ANTSFrame(gui.mainFrame):
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
 				except:
 					exceptMsg = traceback.format_exc()
+					if os.path.isdir(finalPackage):
+						shutil.rmtree(finalPackage)
 					if os.path.isfile("directory.xml"):
 						os.remove("directory.xml")
 					self.errorDialog("Failed to copy bag to destination.", exceptMsg)
@@ -785,7 +824,39 @@ class spashDialog( wx.Dialog ):
 		self.m_button1.Bind( wx.EVT_BUTTON, self.runANTS )
 	
 	def viewReceipt(self, event):
-		print "test view"
+		parser = ET.XMLParser(remove_blank_text=True)
+		configParse = ET.parse("config.xml", parser)
+		configXML = configParse.getroot()
+		import tempfile
+		tempDir = tempfile.mkdtemp()
+		if configXML.find("receipt").text.lower().strip() == "csv":
+			import csv
+			headLine = ["accession", "submitted", "type", "name", "path", "id"]
+			tempCSV = open(os.path.join(tempDir, 'receipt.csv'), 'wb')
+			csv = csv.writer(tempCSV)
+			csv.writerow(headLine)
+			parser = ET.XMLParser(remove_blank_text=True)
+			receiptParse = ET.parse("receipt.xml", parser)
+			receiptXML = receiptParse.getroot()
+			for accession in receiptXML:
+				number = accession.attrib['number']
+				submitted = accession.attrib['submitted']
+				for item in accession:
+					if item.tag == "item":
+						itemList = [number, submitted, item.find('type').text, item.find('name').text, item.find('path').text, item.find('id').text]
+						csv.writerow(itemList)
+			tempCSV.close()
+			subprocess.Popen(os.path.join(tempDir, "receipt.csv"), shell=True)
+		elif configXML.find("receipt").text.lower().strip() == "xml":
+			shutil.copy2("receipt.xml", tempDir)
+			subprocess.Popen(os.path.join(tempDir, "receipt.xml"), shell=True)
+		else:
+			from html import htmlReceipt
+			htmlString = htmlReceipt("receipt.xml", str(datetime.datetime.now()), "config.xml")
+			htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
+			htmlFile.write(htmlString)
+			htmlFile.close()
+			subprocess.Popen(os.path.join(tempDir, "receipt.html"), shell=True)
 	
 	def openLicence(self, event):
 		os.system("LICENSE.txt")

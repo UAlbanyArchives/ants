@@ -1,5 +1,5 @@
 <antsConfig>
-  <accessionCount>142</accessionCount>
+  <accessionCount>157</accessionCount>
   <creator>Office of the President</creator>
   <creatorId>ua000</creatorId>
   <donor>Jill Sample</donor>
@@ -8,15 +8,16 @@
   <office>AH-312</office>
   <address1>1400 Washington Avenue</address1>
   <address2>Albany, NY 12222</address2>
-  <address3></address3>
+  <address3/>
   <transferMethod>network</transferMethod>
   <transferLocation>C:\Projects\ants\destination</transferLocation>
-  <login></login>
-  <pw></pw>
+  <receiveLocation>C:\Projects\ants\destination\request</receiveLocation>
+  <login/>
+  <pw/>
   <compress>zip</compress>
   <checksum>md5</checksum>
   <receipt>html</receipt>
-  <requestEmail></requestEmail>
-  <requestSubject></requestSubject>
-  <requestBody></requestBody>
+  <requestEmail/>
+  <requestSubject/>
+  <requestBody/>
 </antsConfig>
