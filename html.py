@@ -43,7 +43,7 @@ def htmlReceipt(file, timestamp, config):
 	
 	divLeft = ET.SubElement(divMain, "div")
 	divLeft.set("valign", "top")
-	divLeft.set("style", "position:fixed; height:100%; margin:0px; padding:10px; width:30%;")
+	divLeft.set("style", "position:fixed; height:100%; margin:0px; padding:10px; width:30%;overflow-y: scroll;direction: rtl;")
 	
 	divJumbo = ET.SubElement(divLeft, "div")
 	h1 = ET.SubElement(divJumbo, "h1")
@@ -55,6 +55,7 @@ def htmlReceipt(file, timestamp, config):
 	
 	tableLeft = ET.SubElement(divLeft, "table")
 	tableLeft.set("class", "table")
+	tableLeft.set("style", "direction:ltr;")
 	tr1 = ET.SubElement(tableLeft, "tr")
 	th1 = ET.SubElement(tr1, "th")
 	th1.text = "Accession"

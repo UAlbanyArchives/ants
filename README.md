@@ -17,6 +17,5 @@ _______
 
 * Write FTP module
 * Intergrate forensic tools
-* Needs much better error handling
 * comment code
-* give options for types of compresson and hashing
+* make output PREMIS

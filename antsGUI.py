@@ -45,7 +45,7 @@ class mainFrame ( wx.Frame ):
 		
 		self.descDirCtrl = CT.CustomTreeCtrl( self.fileTab, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, agwStyle= wx.TR_DEFAULT_STYLE | CT.TR_FULL_ROW_HIGHLIGHT)
 		self.descDirCtrl.SetBackgroundColour(wx.Colour(255, 255, 255, 255))
-		dirFile = "directory.xml"
+		dirFile = "~directory.xml"
 		parser = ET.XMLParser(remove_blank_text=True)
 		dirParse = ET.parse(dirFile, parser)
 		dirXML = dirParse.getroot()
@@ -139,7 +139,13 @@ class mainFrame ( wx.Frame ):
 		bSizer12.Add( self.transferBtn, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
 		self.compressCheck = wx.CheckBox( self.fileTab, wx.ID_ANY, u"Compress files", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.compressCheck.SetValue(True) 
+		if "compressDefault" in configData:
+			if configData["compressDefault"].lower().strip() == "false":
+				self.compressCheck.SetValue(False)
+			else:
+				self.compressCheck.SetValue(True) 
+		else:
+			self.compressCheck.SetValue(True) 
 		bSizer12.Add( self.compressCheck, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
 		
