@@ -391,6 +391,7 @@ class mainFrame ( wx.Frame ):
 		self.m_button61.Bind( wx.EVT_BUTTON, self.saveReceipt )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
 		self.checkLocation.Bind( wx.EVT_BUTTON, self.testLocation )
+		self.Bind( wx.EVT_CLOSE, self.closeANTS )
 		
 	
 	def __del__( self ):
