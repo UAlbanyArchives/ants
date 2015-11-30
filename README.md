@@ -12,10 +12,12 @@ Currently only a working demo with GUI that transfers files over local or networ
 
 Any feedback or suggested features are welcome, gwiedeman[at]albany.edu
 
+Uses Joakim Schicht's MftRcrd tool, will credit further later
+
 # to do:
 _______
 
 * Write FTP module
-* Intergrate forensic tools
+* Finishe intergrating forensic tools
 * comment code
-* make output PREMIS
+* make unpacker to PREMIS
