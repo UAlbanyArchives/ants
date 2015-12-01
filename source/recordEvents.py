@@ -11,7 +11,7 @@ def recordEvents(self, dirXML):
 				if item.attrib["check"] == "True":
 					self.progressMsg = self.progressMsgRoot + "Reading MFT for " + item.attrib["name"] + "..."
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					readMFT = subprocess.Popen(["tools\\MFTRCRD.exe", item.find("path").text, '-d', 'indxdump=off', '1024', '-s'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+					readMFT = subprocess.Popen(["tools\\MFTRCRD.exe", item.find("path").text, '-d', 'indxdump=off', '1024', '-s'], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 					out, err = readMFT.communicate()
 					recordEvents = ET.Element("recordEvents")
 					item.insert(4, recordEvents)

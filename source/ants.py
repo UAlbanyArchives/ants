@@ -2,6 +2,7 @@ import admin
 import subprocess
 import wx
 import os
+import sys
 
 app = wx.App(False)
 app.MainLoop()
@@ -17,20 +18,15 @@ else:
 		sys.exit()
 
 if systemPass == True:
+	if getattr(sys, 'frozen', False):
+		boot = ["antsFromBoot.exe"]
+	elif __file__:
+		boot = ["python", "antsFromBoot.py"]
 
 	try:
-		if os.path.basename(__file__).endswith(".exe"):
-			admin.runAsAdmin(["antsFromBoot.exe"])
-		else:
-			admin.runAsAdmin(["python", "antsFromBoot.py"])
-		
-		#subprocess.call(['C:\\Projects\\fsTools\\MftRcrd\\MFTRCRD.exe', 'C:\\Projects\\test2.py', '-d', 'indxdump=off', '1024', '-s'])
-		#subprocess.call(['python', 'ants.py'])
+		admin.runAsAdmin(boot)	
 		print "admin"
 
 	except:
-		if os.path.basename(__file__).endswith(".exe"):
-			subprocess.call(["antsFromBoot.exe"])
-		else:
-			subprocess.call(["python", "antsFromBoot.py"])
+		subprocess.call(boot)
 		print "not admin"
