@@ -12,6 +12,7 @@ import zipfile
 import datetime
 import subprocess
 import copy
+import admin
 
  
 #import the newly created GUI file
@@ -23,210 +24,205 @@ class ANTSFrame(gui.mainFrame):
 	#constructor
 	def __init__(self, parent):
 		
-		systemPass = False
-		if os.name == "nt":
-			systemPass = True
+		#checks if booted with admin privileges
+		self.adminTest = False
+		if not admin.isUserAdmin():
+			self.adminTest = False
 		else:
-			checkWin = wx.MessageDialog(None, 'ANTS is designed to be run on Windows and NTFS filesystems. Other systems are likely to experience errors. Do you want to continue anyway?', 'ANTS is designed for Windows.', wx.YES_NO | wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
-			if checkWin.ShowModal() == wx.ID_YES:
-				systemPass = True
-			else:
-				sys.exit()
-		
-		if systemPass == True:
+			self.adminTest = True
 	
-			#Splash screen/browse instructions
+		#Splash screen/browse instructions
+		try:
+			splashDialog = spashDialog()
+			splashDialog.ShowModal()
+		except:
+			exceptMsg = traceback.format_exc()
+			self.errorDialog("Could not load splash dialog", exceptMsg)
+			
+		#read config
+		try:
+			if not os.path.isfile("config.xml"):
+				antsConfigXML = ET.Element('antsConfig')
+				accessionCount = ET.Element('accessionCount')
+				accessionCount.text = "0"
+				antsConfigXML.append(accessionCount)
+				creatorXML = ET.SubElement(antsConfigXML, 'creator')
+				creatorIdXML = ET.SubElement(antsConfigXML, 'creatorId')
+				donorXML = ET.SubElement(antsConfigXML, 'donor')
+				roleXML = ET.SubElement(antsConfigXML, 'role')
+				emailXML = ET.SubElement(antsConfigXML, 'email')
+				officeXML = ET.SubElement(antsConfigXML, 'office')
+				address1XML = ET.SubElement(antsConfigXML, 'address1')
+				address2XML = ET.SubElement(antsConfigXML, 'address2')
+				address3XML = ET.SubElement(antsConfigXML, 'address3')
+				transferMethodXML = ET.SubElement(antsConfigXML, 'transferMethod')
+				transferLocationXML = ET.SubElement(antsConfigXML, 'transferLocation')
+				receiveLocationXML = ET.SubElement(antsConfigXML, 'receiveLocation')
+				loginXML = ET.SubElement(antsConfigXML, 'login')
+				pwXML = ET.SubElement(antsConfigXML, 'pw')
+				compressXML = ET.SubElement(antsConfigXML, 'compress')
+				checksumXML = ET.SubElement(antsConfigXML, 'checksum')
+				checksumXML.set("default", "true")
+				receiptXML = ET.SubElement(antsConfigXML, 'receipt')
+				requestEmailXML = ET.SubElement(antsConfigXML, 'requestEmail')
+				requestSubjectXML = ET.SubElement(antsConfigXML, 'requestSubject')
+				requestBodyXML = ET.SubElement(antsConfigXML, 'requestBody')
+				configXMLString = ET.tostring(antsConfigXML, pretty_print=True)
+				file = open("config.xml", "w")
+				file.write(configXMLString)
+				file.close()
+			configXML = "config.xml"
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
+			if "default" in config.find('compress').attrib:
+				configData.update({"compressDefault": config.find('compress').attrib["default"]})
+		except:
+			exceptMsg = traceback.format_exc()
+			self.errorDialog("Failed to read config.xml.", exceptMsg)
+			
+		def readDirectory():
+			#initial directory selection
 			try:
-				splashDialog = spashDialog()
-				splashDialog.ShowModal()
-			except:
-				exceptMsg = traceback.format_exc()
-				self.errorDialog("Could not load splash dialog", exceptMsg)
-				
-			#read config
-			try:
-				if not os.path.isfile("config.xml"):
-					antsConfigXML = ET.Element('antsConfig')
-					accessionCount = ET.Element('accessionCount')
-					accessionCount.text = "0"
-					antsConfigXML.append(accessionCount)
-					creatorXML = ET.SubElement(antsConfigXML, 'creator')
-					creatorIdXML = ET.SubElement(antsConfigXML, 'creatorId')
-					donorXML = ET.SubElement(antsConfigXML, 'donor')
-					roleXML = ET.SubElement(antsConfigXML, 'role')
-					emailXML = ET.SubElement(antsConfigXML, 'email')
-					officeXML = ET.SubElement(antsConfigXML, 'office')
-					address1XML = ET.SubElement(antsConfigXML, 'address1')
-					address2XML = ET.SubElement(antsConfigXML, 'address2')
-					address3XML = ET.SubElement(antsConfigXML, 'address3')
-					transferMethodXML = ET.SubElement(antsConfigXML, 'transferMethod')
-					transferLocationXML = ET.SubElement(antsConfigXML, 'transferLocation')
-					receiveLocationXML = ET.SubElement(antsConfigXML, 'receiveLocation')
-					loginXML = ET.SubElement(antsConfigXML, 'login')
-					pwXML = ET.SubElement(antsConfigXML, 'pw')
-					compressXML = ET.SubElement(antsConfigXML, 'compress')
-					checksumXML = ET.SubElement(antsConfigXML, 'checksum')
-					checksumXML.set("default", "true")
-					receiptXML = ET.SubElement(antsConfigXML, 'receipt')
-					requestEmailXML = ET.SubElement(antsConfigXML, 'requestEmail')
-					requestSubjectXML = ET.SubElement(antsConfigXML, 'requestSubject')
-					requestBodyXML = ET.SubElement(antsConfigXML, 'requestBody')
-					configXMLString = ET.tostring(antsConfigXML, pretty_print=True)
-					file = open("config.xml", "w")
-					file.write(configXMLString)
-					file.close()
-				configXML = "config.xml"
-				parser = ET.XMLParser(remove_blank_text=True)
-				configParse = ET.parse(configXML, parser)
-				config = configParse.getroot()
-				configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
-				if "default" in config.find('compress').attrib:
-					configData.update({"compressDefault": config.find('compress').attrib["default"]})
-			except:
-				exceptMsg = traceback.format_exc()
-				self.errorDialog("Failed to read config.xml.", exceptMsg)
-				
-			def readDirectory():
-				#initial directory selection
-				try:
-					dialogBrowse = wx.DirDialog(None, "Choose a folder to transfer:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-					if dialogBrowse.ShowModal() == wx.ID_OK:
-						self.sourceDir = dialogBrowse.GetPath()
-					else:
-						os._exit(1)
-					dialogBrowse.Destroy()
-				except:
-					exceptMsg = traceback.format_exc()
-					self.errorDialog("Failed to browse for directory.", exceptMsg,)
-
-				#read directory to ~directory.xml with updated accession count from config.xml
-				try:
-					rootXML = ET.Element('accession')
-					if config.find('accessionCount') is None:
-						config.find('accessionCount').text = "0"
-					elif config.find('accessionCount').text:
-						pass
-					else:
-						config.find('accessionCount').text = "0"
-					accessionCount = int(config.find('accessionCount').text) + 1
-					donorNormal = self.readXML(config, "donor").lower().strip().replace(" ", "_")
-					rootXML.set('number', self.readXML(config, "creatorId") + "-" + donorNormal + "-" + str(accessionCount))
-					profileXML = ET.SubElement(rootXML, "profile")
-					notesXML = ET.SubElement(profileXML, "notes")
-					creatorXML = ET.SubElement(profileXML, "creator")
-					creatorIdXML = ET.SubElement(profileXML, "creatorId")
-					donotXML = ET.SubElement(profileXML, "donor")
-					roleXML = ET.SubElement(profileXML, "role")
-					emailXML = ET.SubElement(profileXML, "email")
-					officeXML = ET.SubElement(profileXML, "office")
-					address1XML = ET.SubElement(profileXML, "address1")
-					address2XML = ET.SubElement(profileXML, "address2")
-					address3XML = ET.SubElement(profileXML, "address3")
-					methodXML = ET.SubElement(profileXML, "method")
-					locationXML = ET.SubElement(profileXML, "location")
-					folderXML = ET.SubElement(rootXML, "folder")
-					folderXML.set('name', os.path.basename(self.sourceDir))
-					folderXML.set('check', 'True')
-					folderId = ET.SubElement(folderXML, "id")
-					folderId.text = str(uuid.uuid4())
-					folderPath = ET.SubElement(folderXML, "path")
-					folderPath.text = self.sourceDir
-					folderDesc = ET.SubElement(folderXML, "description")
-					folderAccess = ET.SubElement(folderXML, "access")
-					def dir2XML(path, root):
-						for item in os.listdir(path):
-							itempath = os.path.join(path, item)
-							if os.path.isdir(itempath):
-								itemXML = ET.SubElement(root, "folder")
-								itemXML.set('name', item)
-								itemXML.set('check', "True")
-								idXML = ET.SubElement(itemXML, "id")
-								idXML.text = str(uuid.uuid4())
-								pathXML = ET.SubElement(itemXML, "path")
-								pathXML.text = itempath
-								descXML = ET.SubElement(itemXML, "description")
-								accessXML = ET.SubElement(itemXML, "access")
-								dir2XML(os.path.join(path, item), itemXML)
-							elif os.path.isfile(itempath):
-								itemXML = ET.SubElement(root, "file")
-								itemXML.set('name', item)
-								itemXML.set('check', "True")
-								idXML = ET.SubElement(itemXML, "id")
-								idXML.text = str(uuid.uuid4())
-								pathXML = ET.SubElement(itemXML, "path")
-								pathXML.text = itempath
-								descXML = ET.SubElement(itemXML, "description")
-								accessXML = ET.SubElement(itemXML, "access")
-					dir2XML(self.sourceDir, folderXML)
-					dirXMLString = ET.tostring(rootXML, pretty_print=True)
-					file = open("~directory.xml", "w")
-					file.write(dirXMLString)
-					file.close()
-				except:
-					exceptMsg = traceback.format_exc()
-					self.errorDialog("Could not read the directory you selected", exceptMsg,)
-				
-		
-			#check for old accession info from last error
-			if os.path.isfile("~directory.xml"):
-				tryRefresh = wx.MessageDialog(None, "Found transfer information from last transfer. This may be from an aborted transfer. Would you like to attempt to retry the last transfer.", "Refresh Last Transfer?", wx.YES_NO | wx.ICON_INFORMATION)
-				refreshResult = tryRefresh.ShowModal()
-				if refreshResult == wx.ID_YES:
-					#check to see if ~directory.xml is still valid
-					parser = ET.XMLParser(remove_blank_text=True)
-					dirParse = ET.parse("~directory.xml", parser)
-					refDirectory = dirParse.getroot()
-					self.noItemCount = 0
-					pathIndex = []
-					#check that every file and folder listed in XML is present
-					for item in refDirectory.iter():
-						if "name" in item.attrib:
-							#creates simple index to check files
-							pathIndex.append(item.find("path").text)
-							itemPath = item.find("path").text
-							if item.tag == "folder":
-								if not os.path.isdir(itemPath):
-									self.noItemCount = self.noItemCount + 1
-							elif item.tag =="file":
-								if not os.path.isfile(itemPath):
-									self.noItemCount = self.noItemCount + 1
-							else:
-								self.noItemCount = self.noItemCount + 1
-					#check that every file and folder in directory is in ~directory.xml
-					oldSource = refDirectory.find("folder/path").text
-					def matchXML(rootDir):
-						for item in os.listdir(rootDir):
-							itemPath = os.path.join(rootDir, item)
-							if os.path.isfile(itemPath):
-								if not itemPath in pathIndex:
-									self.noItemCount = self.noItemCount + 1
-							elif os.path.isdir(itemPath):
-								if not itemPath in pathIndex:
-									self.noItemCount = self.noItemCount + 1
-								matchXML(itemPath)
-					matchXML(oldSource)
-					if self.noItemCount == 0:
-						#~directory.xml is good
-						self.sourceDir = refDirectory.find("folder/path").text
-					else:
-						#there is a problem with ~directory.xml
-						refreshError = wx.MessageDialog(None, "Could not verify that all the files from the last transfer are still present in their original location. Transfer directory must be exactly the same as last transfer to restore data. ANTS is unable to retry the last transfer. Please select a directory and start the transfer from the beginning.", "Failed To Retry Last Transfer", wx.OK | wx.ICON_ERROR)
-						refreshError.ShowModal()
-						readDirectory()
+				dialogBrowse = wx.DirDialog(None, "Choose a folder to transfer:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+				if dialogBrowse.ShowModal() == wx.ID_OK:
+					self.sourceDir = dialogBrowse.GetPath()
 				else:
-					#use does not want to retry last transfer
+					os._exit(1)
+				dialogBrowse.Destroy()
+			except:
+				exceptMsg = traceback.format_exc()
+				self.errorDialog("Failed to browse for directory.", exceptMsg,)
+
+			#read directory to ~directory.xml with updated accession count from config.xml
+			try:
+				rootXML = ET.Element('accession')
+				if config.find('accessionCount') is None:
+					config.find('accessionCount').text = "0"
+				elif config.find('accessionCount').text:
+					pass
+				else:
+					config.find('accessionCount').text = "0"
+				accessionCount = int(config.find('accessionCount').text) + 1
+				donorNormal = self.readXML(config, "donor").lower().strip().replace(" ", "_")
+				rootXML.set('number', self.readXML(config, "creatorId") + "-" + donorNormal + "-" + str(accessionCount))
+				profileXML = ET.SubElement(rootXML, "profile")
+				notesXML = ET.SubElement(profileXML, "notes")
+				creatorXML = ET.SubElement(profileXML, "creator")
+				creatorIdXML = ET.SubElement(profileXML, "creatorId")
+				donotXML = ET.SubElement(profileXML, "donor")
+				roleXML = ET.SubElement(profileXML, "role")
+				emailXML = ET.SubElement(profileXML, "email")
+				officeXML = ET.SubElement(profileXML, "office")
+				address1XML = ET.SubElement(profileXML, "address1")
+				address2XML = ET.SubElement(profileXML, "address2")
+				address3XML = ET.SubElement(profileXML, "address3")
+				methodXML = ET.SubElement(profileXML, "method")
+				locationXML = ET.SubElement(profileXML, "location")
+				folderXML = ET.SubElement(rootXML, "folder")
+				folderXML.set('name', os.path.basename(self.sourceDir))
+				folderXML.set('check', 'True')
+				folderId = ET.SubElement(folderXML, "id")
+				folderId.text = str(uuid.uuid4())
+				folderPath = ET.SubElement(folderXML, "path")
+				folderPath.text = self.sourceDir
+				folderDesc = ET.SubElement(folderXML, "description")
+				folderAccess = ET.SubElement(folderXML, "access")
+				def dir2XML(path, root):
+					for item in os.listdir(path):
+						itempath = os.path.join(path, item)
+						if os.path.isdir(itempath):
+							itemXML = ET.SubElement(root, "folder")
+							itemXML.set('name', item)
+							itemXML.set('check', "True")
+							idXML = ET.SubElement(itemXML, "id")
+							idXML.text = str(uuid.uuid4())
+							pathXML = ET.SubElement(itemXML, "path")
+							pathXML.text = itempath
+							descXML = ET.SubElement(itemXML, "description")
+							accessXML = ET.SubElement(itemXML, "access")
+							dir2XML(os.path.join(path, item), itemXML)
+						elif os.path.isfile(itempath):
+							itemXML = ET.SubElement(root, "file")
+							itemXML.set('name', item)
+							itemXML.set('check', "True")
+							idXML = ET.SubElement(itemXML, "id")
+							idXML.text = str(uuid.uuid4())
+							pathXML = ET.SubElement(itemXML, "path")
+							pathXML.text = itempath
+							descXML = ET.SubElement(itemXML, "description")
+							accessXML = ET.SubElement(itemXML, "access")
+				dir2XML(self.sourceDir, folderXML)
+				dirXMLString = ET.tostring(rootXML, pretty_print=True)
+				file = open("~directory.xml", "w")
+				file.write(dirXMLString)
+				file.close()
+			except:
+				exceptMsg = traceback.format_exc()
+				self.errorDialog("Could not read the directory you selected", exceptMsg,)
+			
+	
+		#check for old accession info from last error
+		if os.path.isfile("~directory.xml"):
+			tryRefresh = wx.MessageDialog(None, "Found transfer information from last transfer. This may be from an aborted transfer. Would you like to attempt to retry the last transfer.", "Refresh Last Transfer?", wx.YES_NO | wx.ICON_INFORMATION)
+			refreshResult = tryRefresh.ShowModal()
+			if refreshResult == wx.ID_YES:
+				#check to see if ~directory.xml is still valid
+				parser = ET.XMLParser(remove_blank_text=True)
+				dirParse = ET.parse("~directory.xml", parser)
+				refDirectory = dirParse.getroot()
+				self.noItemCount = 0
+				pathIndex = []
+				#check that every file and folder listed in XML is present
+				for item in refDirectory.iter():
+					if "name" in item.attrib:
+						#creates simple index to check files
+						pathIndex.append(item.find("path").text)
+						itemPath = item.find("path").text
+						if item.tag == "folder":
+							if not os.path.isdir(itemPath):
+								self.noItemCount = self.noItemCount + 1
+						elif item.tag =="file":
+							if not os.path.isfile(itemPath):
+								self.noItemCount = self.noItemCount + 1
+						else:
+							self.noItemCount = self.noItemCount + 1
+				#check that every file and folder in directory is in ~directory.xml
+				oldSource = refDirectory.find("folder/path").text
+				def matchXML(rootDir):
+					for item in os.listdir(rootDir):
+						itemPath = os.path.join(rootDir, item)
+						if os.path.isfile(itemPath):
+							if not itemPath in pathIndex:
+								self.noItemCount = self.noItemCount + 1
+						elif os.path.isdir(itemPath):
+							if not itemPath in pathIndex:
+								self.noItemCount = self.noItemCount + 1
+							matchXML(itemPath)
+				matchXML(oldSource)
+				if self.noItemCount == 0:
+					#~directory.xml is good
+					self.sourceDir = refDirectory.find("folder/path").text
+				else:
+					#there is a problem with ~directory.xml
+					refreshError = wx.MessageDialog(None, "Could not verify that all the files from the last transfer are still present in their original location. Transfer directory must be exactly the same as last transfer to restore data. ANTS is unable to retry the last transfer. Please select a directory and start the transfer from the beginning.", "Failed To Retry Last Transfer", wx.OK | wx.ICON_ERROR)
+					refreshError.ShowModal()
 					readDirectory()
 			else:
-				#no previous ~directory.xml file found
+				#use does not want to retry last transfer
 				readDirectory()
-				
-				
-			#initialize parent class
-			try:
-				gui.mainFrame.__init__(self, parent, configData, self.sourceDir)
-			except:
-				exceptMsg = traceback.format_exc()
-				self.errorDialog("Could not load GUI", exceptMsg)
+		else:
+			#no previous ~directory.xml file found
+			readDirectory()
+			
+			
+		#initialize parent class
+		try:
+			gui.mainFrame.__init__(self, parent, configData, self.sourceDir)
+		except:
+			exceptMsg = traceback.format_exc()
+			self.errorDialog("Could not load GUI", exceptMsg)
  
 	def errorDialog(self, errorMsg, exceptMsg):
 		#Error message that deletes directory info, cannot retry transfer with same data
@@ -596,12 +592,15 @@ class ANTSFrame(gui.mainFrame):
 			else:
 				pathTransfer = True
 			if pathTransfer == True:
+				totalCount = dirXML.xpath("count(//folder|//file)")
 				recordsCount = dirXML.xpath("count(//folder[@check='True']|//file[@check='True'])")
 				print "files: " + str(recordsCount)
 				if self.compressCheck.IsChecked() is False:
 					progressGoal = recordsCount + recordsCount + 11
 				else:
 					progressGoal = recordsCount + 7
+				if self.adminTest == True:
+					progressGoal = progressGoal + totalCount
 				print "stages: " + str(progressGoal)
 				
 				self.progressCount = 0
@@ -651,7 +650,7 @@ class ANTSFrame(gui.mainFrame):
 					self.progressMsg = self.progressMsgRoot + "Gathering metadata..."
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
 					from recordEvents import recordEvents
-					dirXML = recordEvents(self.sourceDir, dirXML)
+					dirXML = recordEvents(self, dirXML)
 					self.progressCount = self.progressCount + 1
 				except:
 					exceptMsg = traceback.format_exc()
@@ -732,16 +731,20 @@ class ANTSFrame(gui.mainFrame):
 				try:
 					self.progressMsg = self.progressMsgRoot + "Removing records of unwanted files..."
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
+					deleteList = []
 					for record in dirXML.iter():
 						if 'name' in record.attrib:
-							#remove uncheck records from XML directory
+							#create list of elements to remove
 							if record.attrib["check"] == "False":
-								record.getparent().remove(record)
+								deleteList.append([record, record.getparent()])
 							#else remove check attribute
 							elif record.attrib["check"] == "True":
 								record.attrib.pop('check')
 							else:
 								raise  ValueError("XML DIRECTORY ERROR, @check for " + record.attrib["name"] + " is not True or False.")
+					#remove unchecked elements from XML
+					for element in deleteList:
+						element[1].remove(element[0])
 					self.progressCount = self.progressCount + 1
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
 				except:
@@ -864,8 +867,7 @@ class ANTSFrame(gui.mainFrame):
 					exceptMsg = traceback.format_exc()
 					self.errorMessage("Failed to write to receipt to file", exceptMsg)
 				
-				successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transfered in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION)
-				successNotice.ShowModal()
+				
 					
 				if self.progressCount >= progressGoal:
 					print "progressGoal reached " + str(self.progressCount)
@@ -874,6 +876,8 @@ class ANTSFrame(gui.mainFrame):
 					print "didn't reach processGoal, reached " +str(self.progressCount)
 					self.Close()
 					
+				successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transfered in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+				successNotice.ShowModal()
 	
 	
 		

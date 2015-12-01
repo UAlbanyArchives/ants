@@ -1,22 +1,20 @@
 from lxml import etree as ET
 import subprocess
-import admin
+from time import gmtime, strftime
 
-def recordEvents(sourceDir, dirXML):
-
+def recordEvents(self, dirXML):
 	
-	if not admin.isUserAdmin():
-		print "run PLASO"
-	else:
-	
+	if self.adminTest == True:
+		
 		for item in dirXML.iter():
 			if "name" in item.attrib:
-				readMFT = subprocess.Popen(['tools\\MFTRCRD.exe', item.find("path").text, '-d', 'indxdump=off', '1024', '-s'], stdout=subprocess.PIPE)
-				out, err = readMFT.communicate()
-				if not err is None:
-					print "Errors: " + str(err)
-				else:
-					recordEvents = ET.SubElement(item, "recordEvents")
+				if item.attrib["check"] == "True":
+					self.progressMsg = self.progressMsgRoot + "Reading MFT for " + item.attrib["name"] + "..."
+					self.networkProcessing.Update(self.progressCount, self.progressMsg)
+					readMFT = subprocess.Popen(["tools\\MFTRCRD.exe", item.find("path").text, '-d', 'indxdump=off', '1024', '-s'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+					out, err = readMFT.communicate()
+					recordEvents = ET.Element("recordEvents")
+					item.insert(4, recordEvents)
 					out2 = out.replace("\n", "</line><line>")
 					out3 = out2.replace("<line>\r</line>", "</block><block>")
 					out4 = "<root><block><line>" + out3 + "</line></block></root>"
@@ -28,52 +26,73 @@ def recordEvents(sourceDir, dirXML):
 						for line in output.iter("line"):
 							if line.text.strip().startswith("$STANDARD_INFORMATION 1:"):
 								SI = line.getparent()
-								STANDARD_INFORMATION = ET.SubElement(recordEvents, "STANDARD_INFORMATION")
 								for timestamp in SI:
 									if timestamp.text.strip().startswith("File Create Time (CTime):"):
-										CTime = ET.SubElement(STANDARD_INFORMATION, "CTime")
-										CTime.text = timestamp.text.split(": ")[1].strip()
-										CTime.set("type", "File_Create_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "STANDARD_INFORMATION")
+										timestampXML.set("label", "File_Create_Time")
 									elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
-										ATime = ET.SubElement(STANDARD_INFORMATION, "ATime")
-										ATime.text = timestamp.text.split(": ")[1].strip()
-										ATime.set("type", "File_Modified_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "STANDARD_INFORMATION")
+										timestampXML.set("label", "File_Modified_Time")
 									elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
-										MTime = ET.SubElement(STANDARD_INFORMATION, "MTime")
-										MTime.text = timestamp.text.split(": ")[1].strip()
-										MTime.set("type", "MFT_Entry_modified_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "STANDARD_INFORMATION")
+										timestampXML.set("label", "MFT_Entry_modified_Time")
 									elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
-										RTime = ET.SubElement(STANDARD_INFORMATION, "RTime")
-										RTime.text = timestamp.text.split(": ")[1].strip()
-										RTime.set("type", "File_Last_Access_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "STANDARD_INFORMATION")
+										timestampXML.set("label", "File_Last_Access_Time")
 							elif line.text.strip().startswith("$FILE_NAME 1:"):
 								FN = line.getparent()
-								FILE_NAME = ET.SubElement(recordEvents, "FILE_NAME")
 								for timestamp in FN:
 									if timestamp.text.strip().startswith("File Create Time (CTime):"):
-										CTime = ET.SubElement(FILE_NAME, "CTime")
-										CTime.text = timestamp.text.split(": ")[1].strip()
-										CTime.set("type", "File_Create_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "FILE_NAME")
+										timestampXML.set("label", "File_Create_Time")
 									elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
-										ATime = ET.SubElement(FILE_NAME, "ATime")
-										ATime.text = timestamp.text.split(": ")[1].strip()
-										ATime.set("type", "File_Modified_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "FILE_NAME")
+										timestampXML.set("label", "File_Modified_Time")
 									elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
-										MTime = ET.SubElement(FILE_NAME, "MTime")
-										MTime.text = timestamp.text.split(": ")[1].strip()
-										MTime.set("type", "MFT_Entry_modified_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "FILE_NAME")
+										timestampXML.set("label", "MFT_Entry_modified_Time")
 									elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
-										RTime = ET.SubElement(FILE_NAME, "RTime")
-										RTime.text = timestamp.text.split(": ")[1].strip()
-										RTime.set("type", "File_Last_Access_Time")
+										timestampXML = ET.SubElement(recordEvents, "timestamp")
+										timestampXML.text = timestamp.text.split(": ")[1].strip()
+										timestampXML.set("source", "NTFS")
+										timestampXML.set("timezone", strftime("%z", gmtime()))
+										timestampXML.set("type", "FILE_NAME")
+										timestampXML.set("label", "File_Last_Access_Time")
 					except:
 						raise ValueError("Failed to parse MFTRCRD output.")
-				
-	
-		#testProc = subprocess.Popen(['C:\\Projects\\fsTools\\MftRcrd\\MFTRCRD.exe', 'C:\\Projects\\test2.py', '-d', 'indxdump=off', '1024', '-s'], stdout=subprocess.PIPE)
-		#out, err = testProc.communicate()
-		
+				self.progressCount = self.progressCount + 1
 		print "ran MFTRCRD"
+		
+	else:
+		print "run PLASO"
 
 		
 	return dirXML

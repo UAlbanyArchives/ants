@@ -55,18 +55,21 @@ class mainFrame ( wx.Frame ):
 					if item.tag.lower() == "folder":
 						child = self.descDirCtrl.AppendItem(rootPoint, item.attrib['name'], ct_type=1)
 						self.descDirCtrl.SetPyData(child, item.find('id').text)
-						self.descDirCtrl.CheckItem(child)
+						if item.attrib["check"] == "True":
+							self.descDirCtrl.CheckItem(child)
 						dir2tree(item, child)
 					elif item.tag.lower() == "file":
 						child = self.descDirCtrl.AppendItem(rootPoint, item.attrib['name'], ct_type=1)
 						self.descDirCtrl.SetPyData(child, item.find('id').text)
-						self.descDirCtrl.CheckItem(child)
+						if item.attrib["check"] == "True":
+							self.descDirCtrl.CheckItem(child)
 					else:
 						print "error: " + item.tag
 		self.root = self.descDirCtrl.AddRoot(dirXML.find('folder').attrib['name'], ct_type=1)
 		self.descDirCtrl.SetPyData(self.root, dirXML.find('folder/id').text)
 		dir2tree(dirXML.find('folder'), self.root)
-		self.descDirCtrl.CheckItem(self.root)
+		if dirXML.find('folder').attrib["check"] == "True":
+			self.descDirCtrl.CheckItem(self.root)
 		self.descDirCtrl.ExpandAll()
 		self.descDirCtrl.ScrollTo(self.root)
 		
@@ -379,6 +382,7 @@ class mainFrame ( wx.Frame ):
 		self.Centre( wx.BOTH )
 		
 		# Connect Events
+		
 		self.Bind( wx.EVT_CLOSE, self.closeWindow )
 		self.descDirCtrl.Bind( wx.EVT_TREE_SEL_CHANGED, self.descRecord )
 		self.descDirCtrl.Bind( CT.EVT_TREE_ITEM_CHECKED, self.itemChecked )
@@ -392,6 +396,9 @@ class mainFrame ( wx.Frame ):
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
 		self.checkLocation.Bind( wx.EVT_BUTTON, self.testLocation )
 		self.Bind( wx.EVT_CLOSE, self.closeANTS )
+		
+		#show info from old ~directory.xml on load
+		self.descRecord(self)
 		
 	
 	def __del__( self ):
