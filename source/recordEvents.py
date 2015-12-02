@@ -3,6 +3,13 @@ import subprocess
 from time import gmtime, strftime
 
 def recordEvents(self, dirXML):
+
+	def launchWithoutConsole(command, args):
+		#Launches 'command' windowless and waits until finished
+		#found at http://code.activestate.com/recipes/409002-launching-a-subprocess-without-a-console-window/
+		startupinfo = subprocess.STARTUPINFO()
+		startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+		return subprocess.Popen([command] + args, startupinfo=startupinfo, shell=False, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 	
 	if self.adminTest == True:
 		
@@ -11,7 +18,7 @@ def recordEvents(self, dirXML):
 				if item.attrib["check"] == "True":
 					self.progressMsg = self.progressMsgRoot + "Reading MFT for " + item.attrib["name"] + "..."
 					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					readMFT = subprocess.Popen(["tools\\MFTRCRD.exe", item.find("path").text, '-d', 'indxdump=off', '1024', '-s'], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+					readMFT = launchWithoutConsole("tools\\MFTRCRD.exe", [item.find("path").text, '-d', 'indxdump=off', '1024', '-s'])
 					out, err = readMFT.communicate()
 					recordEvents = ET.Element("recordEvents")
 					item.insert(4, recordEvents)
