@@ -60,6 +60,8 @@ class ANTSFrame(gui.mainFrame):
 				receiveLocationXML = ET.SubElement(antsConfigXML, 'receiveLocation')
 				loginXML = ET.SubElement(antsConfigXML, 'login')
 				pwXML = ET.SubElement(antsConfigXML, 'pw')
+				timeZoneXML = ET.SubElement(antsConfigXML, 'timeZone')
+				timestampXML = ET.SubElement(antsConfigXML, 'timestampTool')
 				compressXML = ET.SubElement(antsConfigXML, 'compress')
 				checksumXML = ET.SubElement(antsConfigXML, 'checksum')
 				checksumXML.set("default", "true")
@@ -75,7 +77,7 @@ class ANTSFrame(gui.mainFrame):
 			parser = ET.XMLParser(remove_blank_text=True)
 			configParse = ET.parse(configXML, parser)
 			config = configParse.getroot()
-			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
+			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": base64.b64decode(self.readXML(config, "pw")), "timestampTool": self.readXML(config, "timestampTool"), "timeZone": self.readXML(config, "timeZone"), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
 			if "default" in config.find('compress').attrib:
 				configData.update({"compressDefault": config.find('compress').attrib["default"]})
 		except:
@@ -285,6 +287,14 @@ class ANTSFrame(gui.mainFrame):
 			config.find('transferLocation').text = self.transferLocInput.GetValue()
 			config.find('receiveLocation').text = self.receiveInput.GetValue()
 			config.find('pw').text = base64.b64encode(self.passwordInput.GetValue())
+			if self.timeZoneOption.GetSelection() == 0:
+				config.find('timeZone').text = "utc"
+			else:
+				config.find('timeZone').text = "local"
+			if self.timestampOption.GetSelection() == 0:
+				config.find('timestampTool').text = "os.stat"
+			else:
+				config.find('timestampTool').text = "plaso"
 			if self.compressOption.GetSelection() == 0:
 				config.find('compress').text = "zip"
 			else:
@@ -601,6 +611,8 @@ class ANTSFrame(gui.mainFrame):
 					progressGoal = recordsCount + 7
 				if self.adminTest == True:
 					progressGoal = progressGoal + totalCount
+				else:
+					progressGoal = progressGoal + 1
 				print "stages: " + str(progressGoal)
 				
 				self.progressCount = 0

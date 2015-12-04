@@ -314,7 +314,24 @@ class mainFrame ( wx.Frame ):
 		
 		bSizer3.Add( fgSizer9, 1, wx.EXPAND, 5 )
 		
+		bSizer95 = wx.BoxSizer( wx.HORIZONTAL )
 		bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		timestampChoices = [ u"Python os.stat", u"Plaso Engine" ]
+		self.timestampOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Non-Admin Timestamp Tool", wx.DefaultPosition, wx.DefaultSize, timestampChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["timestampTool"].lower() == "plaso":
+			self.timestampOption.SetSelection( 1 )
+		else:
+			self.timestampOption.SetSelection( 0 )
+		bSizer95.Add( self.timestampOption, 0, wx.ALL, 5 )
+		
+		timeZoneChoices = [ u"UTC", u"Local Time" ]
+		self.timeZoneOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Time Zone", wx.DefaultPosition, wx.DefaultSize, timeZoneChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["timeZone"].lower() == "plaso":
+			self.timeZoneOption.SetSelection( 1 )
+		else:
+			self.timeZoneOption.SetSelection( 0 )
+		bSizer95.Add( self.timeZoneOption, 0, wx.ALL, 5 )
 		
 		compressOptionChoices = [ u"ZIP", u"TAR.GZIP" ]
 		self.compressOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Compression", wx.DefaultPosition, wx.DefaultSize, compressOptionChoices, 1, wx.RA_SPECIFY_COLS )
@@ -355,7 +372,7 @@ class mainFrame ( wx.Frame ):
 		
 		bSizer10.Add( bSizer11, 1, wx.EXPAND, 5 )
 		
-		
+		bSizer3.Add( bSizer95, 1, wx.EXPAND, 5 )
 		bSizer3.Add( bSizer10, 1, wx.EXPAND, 5 )
 		
 		self.m_button9 = wx.Button( self.transferTab, wx.ID_ANY, u"Set as Default", wx.DefaultPosition, wx.DefaultSize, 0 )

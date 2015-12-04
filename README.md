@@ -12,12 +12,12 @@ Currently only a working demo with GUI that transfers files over local or networ
 
 Any feedback or suggested features are welcome, gwiedeman[at]albany.edu
 
-Uses Joakim Schicht's MftRcrd tool, will credit further later
+Uses Joakim Schicht's MftRcrd tool and Plaso engine developed by Kristinn Gudjonsson and Joachim Metz - will credit further later
 
 # to do:
 _______
 
 * Write FTP module
-* Finishe intergrating forensic tools
+* make timestamps consistant and allow for local timezones
 * comment code
 * make unpacker to PREMIS
