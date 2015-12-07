@@ -24,7 +24,8 @@ class mainFrame ( wx.Frame ):
 		displaySize= wx.DisplaySize()
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"ANTS: Archives Network Transfer System", pos = wx.DefaultPosition, size=(displaySize[0]/1.45, displaySize[1]/1.30), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		self.SetBackgroundColour(wx.Colour(221, 221, 221, 255))
-		self.SetSizeHints(400,650)
+		self.SetSizeHints(400,450)
+		txtSize = displaySize[1]/1.30 / float(6.5)
 		self.sourceDir = sourceDir
 		
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
@@ -94,7 +95,7 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText12.Wrap( -1 )
 		fgSizer6.Add( self.m_staticText12, 0, wx.ALL, 5 )
 		
-		self.rcdDescInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,140 ), wx.TE_MULTILINE )
+		self.rcdDescInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,txtSize ), wx.TE_MULTILINE )
 		fgSizer6.Add( self.rcdDescInput, 0, wx.ALL, 5 )
 		
 		bSizer91 = wx.BoxSizer( wx.VERTICAL )
@@ -103,13 +104,13 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText13.Wrap( -1 )
 		bSizer91.Add( self.m_staticText13, 0, wx.ALL, 5 )
 		
-		self.m_button6 = wx.Button( self.fileTab, wx.ID_ANY, u"Options >", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button6 = wx.Button( self.fileTab, wx.ID_ANY, u"Examples >", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer91.Add( self.m_button6, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
 		
 		
 		fgSizer6.Add( bSizer91, 1, wx.EXPAND, 5 )
 		
-		self.rcdAccessInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,140 ), wx.TE_MULTILINE )
+		self.rcdAccessInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,txtSize ), wx.TE_MULTILINE )
 		fgSizer6.Add( self.rcdAccessInput, 0, wx.ALL, 5 )
 		
 		
@@ -261,37 +262,45 @@ class mainFrame ( wx.Frame ):
 		self.transferTab.SetBackgroundColour(wx.Colour(255, 255, 255, 255))
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
+		bSizer33 = wx.BoxSizer( wx.HORIZONTAL )
 		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)" ]
 		self.m_radioBox1 = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Transfer Method", wx.DefaultPosition, wx.DefaultSize, m_radioBox1Choices, 1, wx.RA_SPECIFY_COLS )
 		if configData["transferMethod"].lower() == "ftp":
 			self.m_radioBox1.SetSelection( 1 )
 		else:
 			self.m_radioBox1.SetSelection( 0 )
-		bSizer3.Add( self.m_radioBox1, 0, wx.ALL, 5 )
+		bSizer33.Add( self.m_radioBox1, 0, wx.ALL, 5 )
+		bSizer34 = wx.BoxSizer( wx.VERTICAL )
+		bSizer34.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		self.receiveFiles = wx.Button( self.transferTab, wx.ID_ANY, u"Receive Files", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer34.Add( self.receiveFiles, 0, wx.ALL, 5 )
+		bSizer34.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		bSizer33.Add( bSizer34, 1, wx.EXPAND, 5 )
+		bSizer3.Add( bSizer33, 1, wx.EXPAND, 5 )
 		
 		fgSizer9 = wx.FlexGridSizer( 4, 3, 0, 0 )
 		fgSizer9.SetFlexibleDirection( wx.BOTH )
 		fgSizer9.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_staticText18 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Transfer Location (PATH or IP)", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText18 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Transfer Location (PATH or FTP URL)", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText18.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText18, 0, wx.ALL, 5 )
 		
 		self.transferLocInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["transferLocation"], wx.DefaultPosition, wx.Size( 250,-1 ), 0 )
 		fgSizer9.Add( self.transferLocInput, 0, wx.ALL, 5 )
 		
-		self.checkLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Location", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.checkLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Transfer Location", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer9.Add( self.checkLocation, 0, wx.ALL, 5 )
 		
-		self.m_staticText21 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Receive Location (PATH or IP)", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText21 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Receive Location (PATH or FTP URL)", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText21.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText21, 0, wx.ALL, 5 )
 		
 		self.receiveInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["receiveLocation"], wx.DefaultPosition, wx.Size( 250,-1 ) )
 		fgSizer9.Add( self.receiveInput, 0, wx.ALL, 5 )
 		
-		self.receiveFiles = wx.Button( self.transferTab, wx.ID_ANY, u"Receive Files", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer9.Add( self.receiveFiles, 0, wx.ALL, 5 )
+		self.checkReceiveLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Receive Location", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer9.Add( self.checkReceiveLocation, 0, wx.ALL, 5 )
 		
 		self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText19.Wrap( -1 )
@@ -412,6 +421,7 @@ class mainFrame ( wx.Frame ):
 		self.m_button61.Bind( wx.EVT_BUTTON, self.saveReceipt )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
 		self.checkLocation.Bind( wx.EVT_BUTTON, self.testLocation )
+		self.checkReceiveLocation.Bind( wx.EVT_BUTTON, self.testRecieveLocation )
 		self.Bind( wx.EVT_CLOSE, self.closeANTS )
 		
 		#show info from old ~directory.xml on load

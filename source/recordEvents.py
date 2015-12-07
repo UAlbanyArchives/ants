@@ -21,7 +21,7 @@ def recordEvents(self, dirXML):
 			if "name" in item.attrib:
 				if item.attrib["check"] == "True":
 					self.progressMsg = self.progressMsgRoot + "Reading MFT for " + item.attrib["name"] + "..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
+					self.progressBar.Update(self.progressCount, self.progressMsg)
 					readMFT = launchWithoutConsole("tools\\MFTRCRD.exe", [item.find("path").text, '-d', 'indxdump=off', '1024', '-s'])
 					out, err = readMFT.communicate()
 					recordEvents = ET.Element("recordEvents")
@@ -117,7 +117,7 @@ def recordEvents(self, dirXML):
 				if "name" in item.attrib:
 					if item.attrib["check"] == "True":
 						self.progressMsg = self.progressMsgRoot + "Reading timestamps for " + item.attrib["name"] + "..."
-						self.networkProcessing.Update(self.progressCount, self.progressMsg)
+						self.progressBar.Update(self.progressCount, self.progressMsg)
 						(mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(item.find("path").text)
 						recordEvents = ET.Element("recordEvents")
 						item.insert(4, recordEvents)
@@ -151,7 +151,7 @@ def recordEvents(self, dirXML):
 			#run the Plaso Engine to gather record-events
 			#try:
 			self.progressMsg = self.progressMsgRoot + "Reading timestamps"
-			self.networkProcessing.Update(self.progressCount, self.progressMsg)
+			self.progressBar.Update(self.progressCount, self.progressMsg)
 			if strftime("%z", gmtime()) == "Eastern Standard Time":
 				timeZone = "US/Eastern"
 			else:
@@ -161,15 +161,15 @@ def recordEvents(self, dirXML):
 			while len(out) < 1:
 				nextline = runLog2timeline.stdout.readline()
 				self.progressMsg = self.progressMsgRoot + str(nextline)
-				self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				self.progressBar.Update(self.progressCount, self.progressMsg)
 				if nextline == '' and runLog2timeline.poll() != None:
 					break
 				sys.stdout.write(nextline)
-				sys.stdout.flush()
+				#sys.stdout.flush()
 				#count = count + 1
 				#self.progressMsg = self.progressMsgRoot + str(count)
 				#self.progressCount = self.progressCount + 1
-				#self.networkProcessing.Update(self.progressCount, self.progressMsg)
+				#self.progressBar.Update(self.progressCount, self.progressMsg)
 				
 			output = runLog2timeline.communicate()[0]
 			exitCode = runLog2timeline.returncode

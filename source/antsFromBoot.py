@@ -7,13 +7,10 @@ import traceback
 import uuid
 import base64
 import shutil
-import bagit
-import zipfile
 import datetime
 import subprocess
-import copy
 import admin
-
+from transfer import transferModule
  
 #import the newly created GUI file
 import antsGUI as gui
@@ -30,15 +27,7 @@ class ANTSFrame(gui.mainFrame):
 			self.adminTest = False
 		else:
 			self.adminTest = True
-	
-		#Splash screen/browse instructions
-		try:
-			splashDialog = spashDialog()
-			splashDialog.ShowModal()
-		except:
-			exceptMsg = traceback.format_exc()
-			self.errorDialog("Could not load splash dialog", exceptMsg)
-			
+				
 		#read config
 		try:
 			if not os.path.isfile("config.xml"):
@@ -226,9 +215,26 @@ class ANTSFrame(gui.mainFrame):
 			exceptMsg = traceback.format_exc()
 			self.errorDialog("Could not load GUI", exceptMsg)
  
+	#Runs the transferModule to package and move SIP
+	def transferFiles(self, event):
+		try:
+			transferModule(self)
+		except:
+			#error Dialog that doesn't close ANTS
+			print "transfer Failed"
+			exceptMsg = traceback.format_exc()
+			print exceptMsg
+			errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
+			file = open("errorLog.txt", "a")
+			file.write(errorOutput)
+			file.close()
+			self.progressBar.Destroy()
+			errorPopup = wx.MessageDialog(None, "Transfer Failed" + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
+			errorPopup.ShowModal()
+	
 	def errorDialog(self, errorMsg, exceptMsg):
 		#Error message that deletes directory info, cannot retry transfer with same data
-		errorOutput = "\n" + str(exceptMsg) + "\n********************************************************************************"
+		errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
 		print exceptMsg
 		file = open("errorLog.txt", "a")
 		file.write(errorOutput)
@@ -240,14 +246,12 @@ class ANTSFrame(gui.mainFrame):
 		sys.exit()
 		
 	def errorMessage(self, errorMsg, exceptMsg):
-		#Errot message that keeps directory info, enables retry of transfer with same data
-		errorOutput = "\n" + str(exceptMsg) + "\n********************************************************************************"
+		#Error message that keeps directory info, enables retry of transfer with same data
+		errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
 		print exceptMsg
 		file = open("errorLog.txt", "a")
 		file.write(errorOutput)
 		file.close()
-		#if os.path.isfile("~directory.xml"):
-			#os.remove("~directory.xml")
 		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
 		errorPopup.ShowModal()
 		sys.exit()
@@ -456,6 +460,22 @@ class ANTSFrame(gui.mainFrame):
 					badDir.ShowModal()
 			else:
 				print location
+				
+	def testRecieveLocation(self, event):
+		location = self.receiveInput.GetValue()
+		if not len(location) > 0:
+			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
+			noLoc.ShowModal()
+		else:
+			if self.m_radioBox1.GetSelection() == 0:
+				if os.path.isdir(location):
+					goodDir = wx.MessageDialog(None, 'The directory you entered is correct.', 'Found Directory', wx.OK | wx.ICON_INFORMATION)
+					goodDir.ShowModal()
+				else:
+					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
+					badDir.ShowModal()
+			else:
+				print location
 	
 	def updateNotes(self, event):
 		dirFile = "~directory.xml"
@@ -535,512 +555,6 @@ class ANTSFrame(gui.mainFrame):
 				fp = os.path.join(dirpath, f)
 				total_size += os.path.getsize(fp)
 		return total_size
-	
-	def transferFiles(self, event):	
-		dirFile = "~directory.xml"
-		parser = ET.XMLParser(remove_blank_text=True)
-		dirParse = ET.parse(dirFile, parser)
-		dirXML = dirParse.getroot()
-		
-		#update accession count
-		configXML = "config.xml"
-		parser = ET.XMLParser(remove_blank_text=True)
-		configParse = ET.parse(configXML, parser)
-		config = configParse.getroot()
-		config.find("accessionCount").text = str(int(config.find("accessionCount").text) + 1)
-		configString = ET.tostring(config, pretty_print=True)
-		file = open("config.xml", "w")
-		file.write(configString)
-		file.close()		
-		
-		notesText = self.notesInput.GetValue()
-		dirXML.find("profile/notes").text = notesText
-		creatorText = self.creatorInput.GetValue()
-		dirXML.find("profile/creator").text = creatorText
-		creatorIdText = self.creatorIdInput.GetValue()
-		dirXML.find("profile/creatorId").text = creatorIdText
-		donorText = self.donorInput.GetValue()
-		dirXML.find("profile/donor").text = donorText
-		roleText = self.positionInput.GetValue()
-		dirXML.find("profile/role").text = roleText
-		emailText = self.emailInput.GetValue()
-		dirXML.find("profile/email").text = emailText
-		officeText = self.officeInput.GetValue()
-		dirXML.find("profile/office").text = officeText
-		address1Text = self.address1Input.GetValue()
-		dirXML.find("profile/address1").text = address1Text
-		address2Text = self.address2Input.GetValue()
-		dirXML.find("profile/address2").text = address2Text
-		address3Text = self.address3Input.GetValue()
-		dirXML.find("profile/address3").text = address3Text
-		locationText = self.transferLocInput.GetValue()
-		dirXML.find("profile/location").text = locationText
-		if self.m_radioBox1.GetSelection() == 1:
-			methodText = "ftp"
-			dirXML.find("profile/method").text = methodText
-		else:
-			methodText = "network"
-			dirXML.find("profile/method").text = methodText
-		
-		if methodText == "ftp":
-			ftpDemo = wx.MessageDialog(None, 'Demo version. FTP module has not yet been written. \nPlease use Network Path or Local Path to test.', 'FTP Not Available', wx.OK | wx.ICON_EXCLAMATION)
-			ftpDemo.ShowModal()
-		else:
-			pathTransfer = False
-			if len(locationText) < 1:
-				netwError = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Transfer Location Error', wx.OK | wx.ICON_EXCLAMATION)
-				netwError.ShowModal()
-			elif not os.path.isdir(locationText):
-				netwError = wx.MessageDialog(None, "The network or location path \"" + locationText + "\" does not exist. Would you like to try to create this directory?", "Transfer Location Not Found", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_WARNING)
-				if netwError.ShowModal() == wx.ID_YES:
-					try:
-						os.makedirs(locationText)
-						pathTransfer = True
-					except:
-						exceptMsg = traceback.format_exc()
-						self.errorMessage("Unable to create directory.", exceptMsg)
-			else:
-				pathTransfer = True
-			if pathTransfer == True:
-				totalCount = dirXML.xpath("count(//folder|//file)")
-				recordsCount = dirXML.xpath("count(//folder[@check='True']|//file[@check='True'])")
-				print "files: " + str(recordsCount)
-				if self.compressCheck.IsChecked() is False:
-					progressGoal = recordsCount + recordsCount + 11
-				else:
-					progressGoal = recordsCount + 7
-				if self.adminTest == True:
-					progressGoal = progressGoal + totalCount
-				else:
-					progressGoal = progressGoal + 1
-				print "stages: " + str(progressGoal)
-				
-				self.progressCount = 0
-				self.progressMsgRoot = "Packaging your records and transferring them to the archives.\n"
-				self.progressMsg = self.progressMsgRoot
-				self.networkProcessing = wx.ProgressDialog("ANTS: Archives Network Transfer System", self.progressMsg, maximum=progressGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
-				self.networkProcessing.ShowModal()
-				
-				#moves directory for each selection in XML while updating progress dialog for every file and folder
-				def countCopyXML(source, destination, dirXML):
-					for item in os.listdir(source):
-						path = os.path.join(source, item)
-						if path != destination:
-							pathFromSource = path.split(self.sourceDir + "\\")[1]
-							pathList = pathFromSource.split("\\")
-							pathLength = len(pathList)
-							pathString = "/accession/folder[@name='" + dirXML.find('folder').attrib['name'] + "']"
-							for pathPart in pathList:
-								if pathPart != pathList[pathLength - 1]:
-									pathString = pathString +  "/folder[@name=\"" + pathPart + "\"]"
-								else:
-									if os.path.isdir(path):
-										pathString = pathString +  "/folder[@name=\"" + pathPart + "\"]"
-									else:
-										pathString = pathString +  "/file[@name=\"" + pathPart + "\"]"							
-							itemXML = dirXML.xpath(pathString)[0]
-							if itemXML.attrib['check'] == "True":							
-								if os.path.isdir(path):
-									self.progressMsg = self.progressMsgRoot + "Gathering " + item
-									self.networkProcessing.Update(self.progressCount, self.progressMsg)
-									os.makedirs(os.path.join(destination, item))
-									shutil.copystat(path, os.path.join(destination, item))
-									self.progressCount = self.progressCount + 1
-									self.networkProcessing.Update(self.progressCount, self.progressMsg)
-									countCopyXML(path, os.path.join(destination, item), dirXML)
-								elif os.path.isfile(path):
-									self.progressMsg = self.progressMsgRoot + "Gathering " + item
-									self.networkProcessing.Update(self.progressCount, self.progressMsg)
-									shutil.copy2(path, destination)
-									self.progressCount = self.progressCount + 1
-									self.networkProcessing.Update(self.progressCount, self.progressMsg)
-								else:
-									print "error: " + path
-				
-				#run forensics tools
-				try:
-					self.progressMsg = self.progressMsgRoot + "Gathering metadata..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					from recordEvents import recordEvents
-					dirXML = recordEvents(self, dirXML)
-					self.progressCount = self.progressCount + 1
-				except:
-					exceptMsg = traceback.format_exc()
-					self.errorMessage("Failed to run forensics tools.", exceptMsg)
-				
-				#move files to new directory
-				try:
-					self.progressMsg = self.progressMsgRoot + "Gathering files..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					accessionNumber = dirXML.attrib['number']
-					os.makedirs(os.path.join(self.sourceDir, accessionNumber))
-					bagDir = os.path.join(self.sourceDir, accessionNumber)
-					countCopyXML(self.sourceDir, bagDir, dirXML)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					self.errorMessage("Failed to move files to new directory.", exceptMsg)
-				
-				#bag directory
-				try:
-					self.progressMsg = self.progressMsgRoot + "Bagging files..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					bagInfo = {'Contact-Name': donorText}
-					if self.hashOption.GetSelection() == 0:
-						bag = bagit.make_bag(bagDir, bagInfo)
-					elif self.hashOption.GetSelection() == 1:
-						bag = bagit.make_bag(bagDir, bagInfo, 1, ['sha256'])
-					else:
-						raise ValueError("Unable to read checksum selection.")
-					self.progressCount = self.progressCount + 1
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					self.errorMessage("Failed to bag files.", exceptMsg)
-				
-				
-				#write to receipt
-				try:
-					self.progressMsg = self.progressMsgRoot + "Writing receipt..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					if os.path.isfile("receipt.xml"):
-						parser = ET.XMLParser(remove_blank_text=True)
-						recriptParse = ET.parse("receipt.xml", parser)
-						receiptRoot = recriptParse.getroot()
-					else:
-						receiptRoot = ET.Element('receipt')
-					accessionXML = ET.Element("accession")
-					accessionXML.set('number', dirXML.attrib['number'])
-					receiptRoot.append(accessionXML)
-					profileXML= copy.deepcopy(dirXML.find("profile"))
-					accessionXML.append(profileXML)
-					for item in dirXML.iter():
-						if "name" in item.attrib:
-							if item.attrib['check'] == "True":
-								itemXML = ET.Element('item')
-								typeXML = ET.SubElement(itemXML, 'type')
-								typeXML.text = item.tag
-								nameXML = ET.SubElement(itemXML, 'name')
-								nameXML.text = item.attrib['name']
-								pathXML = ET.SubElement(itemXML, 'path')
-								pathXML.text = item.find("path").text
-								idXML = ET.SubElement(itemXML, 'id')
-								idXML.text = item.find('id').text
-								accessionXML.append(itemXML)
-					self.progressCount = self.progressCount + 1
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					self.errorMessage("Failed to write receipt", exceptMsg)
-				
-				
-				#remove unwanted files from XML
-				try:
-					self.progressMsg = self.progressMsgRoot + "Removing records of unwanted files..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					deleteList = []
-					for record in dirXML.iter():
-						if 'name' in record.attrib:
-							#create list of elements to remove
-							if record.attrib["check"] == "False":
-								deleteList.append([record, record.getparent()])
-							#else remove check attribute
-							elif record.attrib["check"] == "True":
-								record.attrib.pop('check')
-							else:
-								raise  ValueError("XML DIRECTORY ERROR, @check for " + record.attrib["name"] + " is not True or False.")
-					#remove unchecked elements from XML
-					for element in deleteList:
-						element[1].remove(element[0])
-					self.progressCount = self.progressCount + 1
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					self.errorMessage("Failed to remove unwanted files from XML", exceptMsg)
-					
-				
-				#write XML to file and update bag manifests
-				try:
-					self.progressMsg = self.progressMsgRoot + "Writing metadata and finalizing manifests..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					#write submission time to XML
-					dirXML.set('submitted', str(datetime.datetime.now()))
-					#write submission time to receipt
-					accessionXML.set('submitted', dirXML.attrib['submitted'])
-					descString = ET.tostring(dirXML, pretty_print=True)					
-					file = open(bagDir + "\\" + dirXML.attrib["number"] + ".xml", "w")
-					file.write(descString)
-					file.close()
-					bag.save(manifests=True)
-					self.progressCount = self.progressCount + 1
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					self.errorMessage("Failed to write XML to file and update bag manifests.", exceptMsg)
-				
-				#compress bag?
-				try:
-					if self.compressCheck.IsChecked() is True:
-						self.progressMsg = self.progressMsgRoot + "Compressing data..."
-						self.networkProcessing.Update(self.progressCount, self.progressMsg)
-						if self.get_size(bagDir) >= 2000000000:
-							raise ValueError("The directory you are trying to transfer is larger than 2GB and cannot be compressed.")
-						else:
-							if self.compressOption.GetSelection() == 0:
-								finalPackage = shutil.make_archive(bagDir, 'zip', bagDir)
-							elif self.compressOption.GetSelection() == 1:
-								finalPackage = shutil.make_archive(bagDir, 'gztar', bagDir)
-							else:
-								raise ValueError("Unable to read compression selection.")
-							shutil.rmtree(bagDir)
-							self.progressCount = self.progressCount + 1
-							self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					else:
-						finalPackage = bagDir
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(bagDir):
-						shutil.rmtree(bagDir)
-					if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".zip")):
-						os.remove(os.path.join(self.sourceDir, accessionNumber,".zip"))
-					if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".tar.gz")):
-						os.remove(os.path.join(self.sourceDir, accessionNumber,".tar.gz"))
-					self.errorMessage("Failed to compress bag.", exceptMsg)
-				
-				#moves directory for each selection in XML while updating progress dialog for every file and folder
-				def countCopy(source, destination):
-					for item in os.listdir(source):
-						path = os.path.join(source, item)
-						if os.path.isdir(path):
-							self.progressMsg = self.progressMsgRoot + "Transferring " + item
-							self.networkProcessing.Update(self.progressCount, self.progressMsg)
-							os.makedirs(os.path.join(destination, item))
-							shutil.copystat(path, os.path.join(destination, item))
-							self.progressCount = self.progressCount + 1
-							self.networkProcessing.Update(self.progressCount, self.progressMsg)
-							countCopy(path, os.path.join(destination, item))
-						elif os.path.isfile(path):
-							self.progressMsg = self.progressMsgRoot + "Transferring " + item
-							self.networkProcessing.Update(self.progressCount, self.progressMsg)
-							shutil.copy2(path, destination)
-							self.progressCount = self.progressCount + 1
-							self.networkProcessing.Update(self.progressCount, self.progressMsg)
-						else:
-							print "error: " + path
-									
-				#copy bag to destination
-				try:
-					self.progressMsg = self.progressMsgRoot + "Transferring to the Archives..."
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-					if os.path.isdir(finalPackage):
-						os.makedirs(os.path.join(locationText, accessionNumber))
-						destination = os.path.join(locationText, accessionNumber)
-						countCopy(finalPackage, destination)
-						if os.path.isdir(finalPackage):
-							shutil.rmtree(finalPackage)
-					elif os.path.isfile(finalPackage):
-						shutil.copy2(finalPackage, locationText)
-						os.remove(finalPackage)
-					else:
-						raise ValueError("Could not detect if package was file or directory.")
-					self.progressCount = self.progressCount + 1
-					self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					if os.path.isdir(finalPackage):
-						shutil.rmtree(finalPackage)
-					elif os.path.isfile(finalPackage):
-						os.remove(finalPackage)
-					self.errorMessage("Failed to copy bag to destination.", exceptMsg)
-				
-				
-				#write receipt to file
-				try:
-					receiptString = ET.tostring(receiptRoot, pretty_print=True)	
-					file = open("receipt.xml", "w")
-					file.write(receiptString)
-					file.close()
-					os.remove("~directory.xml")
-					self.progressCount = self.progressCount + 1
-					if self.progressCount == progressGoal:
-						self.networkProcessing.Destroy()
-					else:
-						self.networkProcessing.Update(self.progressCount, self.progressMsg)
-				except:
-					exceptMsg = traceback.format_exc()
-					self.errorMessage("Failed to write to receipt to file", exceptMsg)
-				
-				
-					
-				if self.progressCount >= progressGoal:
-					print "progressGoal reached " + str(self.progressCount)
-					self.Close()
-				else:
-					print "didn't reach processGoal, reached " +str(self.progressCount)
-					self.Close()
-					
-				successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transfered in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
-				successNotice.ShowModal()
-	
-	
-		
-################################################################################################################	
-class spashDialog( wx.Dialog ):
-	
-	def __init__( self ):
-		wx.Dialog.__init__ ( self, None, id = wx.ID_ANY, title = "Welcome to ANTS", pos = wx.DefaultPosition, size = wx.DefaultSize, style = wx.DEFAULT_DIALOG_STYLE )
-		
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
-		
-		bSizer1 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_panel1 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		bSizer2 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_bitmap1 = wx.StaticBitmap( self.m_panel1, wx.ID_ANY, wx.NullBitmap, wx.DefaultPosition, wx.Size( 70,70 ), 0 )
-		bSizer2.Add( self.m_bitmap1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		self.m_staticText1 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"ANTS: Archives Network Transfer System", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText1.Wrap( -1 )
-		self.m_staticText1.SetFont( wx.Font( 18, 74, 90, 90, False, "Arial" ) )
-		
-		bSizer2.Add( self.m_staticText1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		self.m_staticText2 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"ANTS gathers metadata and packages files for transfer to an institutional archives.", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Select a folder to transfer.", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText2.Wrap( -1 )
-		self.m_staticText3.Wrap( -1 )
-		bSizer2.Add( self.m_staticText2, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		bSizer2.Add( self.m_staticText3, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		bSizer22 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bSizer22.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		self.m_button1 = wx.Button( self.m_panel1, wx.ID_ANY, u"Browse...", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer22.Add( self.m_button1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		self.m_button2 = wx.Button( self.m_panel1, wx.ID_ANY, u"View Receipt", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer22.Add( self.m_button2, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		bSizer22.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		bSizer2.Add( bSizer22, 1, wx.EXPAND, 5 )
-		
-		self.m_staticText3 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"(C) 2015", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3.Wrap( -1 )
-		bSizer2.Add( self.m_staticText3, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bSizer5 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_hyperlink1 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, wx.EmptyString, u"http://library.albany.edu/archive/universityarchives", wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
-		bSizer5.Add( self.m_hyperlink1, 0, wx.ALL, 5 )
-		
-		
-		bSizer3.Add( bSizer5, 1, wx.EXPAND, 5 )
-		
-		bSizer4 = wx.BoxSizer( wx.HORIZONTAL )
-		bSizer48 = wx.BoxSizer( wx.VERTICAL )
-		bSizer49 = wx.BoxSizer( wx.VERTICAL )
-		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		bSizer4.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
-		bSizer4.Add( bSizer48, 1, wx.EXPAND, 5 )
-		bSizer4.Add( bSizer49, 1, wx.EXPAND, 5 )
-		
-		self.m_hyperlink3 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, u"Credits", wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
-		bSizer48.Add( self.m_hyperlink3, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
-		
-		self.m_hyperlink2 = wx.HyperlinkCtrl( self.m_panel1, wx.ID_ANY, u"Licence", wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
-		bSizer49.Add( self.m_hyperlink2, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
-		
-		self.m_button2.Bind( wx.EVT_BUTTON, self.viewReceipt )
-		self.m_hyperlink2.Bind( wx.EVT_HYPERLINK, self.openLicence)
-		self.m_hyperlink3.Bind( wx.EVT_HYPERLINK, self.openCredits)
-		self.Bind( wx.EVT_CLOSE, self.closeProgram )
-		
-		
-		bSizer3.Add( bSizer4, 1, wx.EXPAND, 5 )
-		
-		
-		bSizer2.Add( bSizer3, 1, wx.EXPAND, 5 )
-		
-		
-		self.m_panel1.SetSizer( bSizer2 )
-		self.m_panel1.Layout()
-		bSizer2.Fit( self.m_panel1 )
-		bSizer1.Add( self.m_panel1, 1, wx.ALL|wx.EXPAND, 5 )
-		
-		
-		self.SetSizer( bSizer1 )
-		self.Layout()
-		bSizer1.Fit( self )
-		
-		self.Centre( wx.BOTH )
-		
-		# Connect Events
-		self.m_button1.Bind( wx.EVT_BUTTON, self.runANTS )
-	
-	def viewReceipt(self, event):
-		if not os.path.isfile("receipt.xml"):
-			noReceipt = wx.MessageDialog(None, 'Unable to find a receipt. You must tranfer files in order to obtain a receipt.', 'Ne Receipt found', wx.OK | wx.ICON_WARNING)
-			noReceipt.ShowModal()
-		else:
-			parser = ET.XMLParser(remove_blank_text=True)
-			configParse = ET.parse("config.xml", parser)
-			configXML = configParse.getroot()
-			import tempfile
-			tempDir = tempfile.mkdtemp()
-			if configXML.find("receipt").text.lower().strip() == "csv":
-				import csv
-				headLine = ["accession", "submitted", "type", "name", "path", "id"]
-				tempCSV = open(os.path.join(tempDir, 'receipt.csv'), 'wb')
-				csv = csv.writer(tempCSV)
-				csv.writerow(headLine)
-				parser = ET.XMLParser(remove_blank_text=True)
-				receiptParse = ET.parse("receipt.xml", parser)
-				receiptXML = receiptParse.getroot()
-				for accession in receiptXML:
-					number = accession.attrib['number']
-					submitted = accession.attrib['submitted']
-					for item in accession:
-						if item.tag == "item":
-							itemList = [number, submitted, item.find('type').text, item.find('name').text, item.find('path').text, item.find('id').text]
-							csv.writerow(itemList)
-				tempCSV.close()
-				subprocess.Popen(os.path.join(tempDir, "receipt.csv"), shell=True)
-			elif configXML.find("receipt").text.lower().strip() == "xml":
-				shutil.copy2("receipt.xml", tempDir)
-				subprocess.Popen(os.path.join(tempDir, "receipt.xml"), shell=True)
-			else:
-				from html import htmlReceipt
-				htmlString = htmlReceipt("receipt.xml", str(datetime.datetime.now()), "config.xml")
-				htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
-				htmlFile.write(htmlString)
-				htmlFile.close()
-				subprocess.Popen(os.path.join(tempDir, "receipt.html"), shell=True)
-	
-	def openLicence(self, event):
-		os.system("LICENSE.txt")
-	
-	def openCredits(self, event):
-		wx.MessageBox('Credits here', 'Info',  wx.OK | wx.ICON_INFORMATION)
-		
-	def closeProgram(self, event):
-		sys.exit()
-	
-	
-	# Virtual event handlers, overide them in your derived class
-	def runANTS( self, event ):
-		self.Destroy()
-
 		
  
 #mandatory in wx, create an app, False stands for not deteriction stdin/stdout

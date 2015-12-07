@@ -25,8 +25,8 @@ def isUserAdmin():
 	else:
 		raise RuntimeError, "Unsupported operating system for this module: %s" % (os.name,)
 
-def runAsAdmin(cmdLine=None, wait=True):
-
+def runAsAdmin(self, cmdLine=None, wait=True):
+	
 	if os.name != 'nt':
 		raise RuntimeError, "This function is only implemented on Windows."
 
@@ -61,7 +61,7 @@ def runAsAdmin(cmdLine=None, wait=True):
 							  lpVerb=lpVerb,
 							  lpFile=cmd,
 							  lpParameters=params)
-
+	self.Close()
 	if wait:
 		procHandle = procInfo['hProcess']	
 		obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)

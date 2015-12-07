@@ -18,6 +18,7 @@ Uses Joakim Schicht's MftRcrd tool and Plaso engine developed by Kristinn Gudjon
 _______
 
 * Write FTP module
+* Write request module
 * make timestamps consistant and allow for local timezones
 * comment code
 * make unpacker to PREMIS

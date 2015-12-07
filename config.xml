@@ -1,5 +1,5 @@
 <antsConfig>
-  <accessionCount>477</accessionCount>
+  <accessionCount>608</accessionCount>
   <creator>Office of the President</creator>
   <creatorId>ua000</creatorId>
   <donor>Jill Sample</donor>
@@ -14,6 +14,8 @@
   <receiveLocation>C:\Projects\ants\destination\request</receiveLocation>
   <login/>
   <pw/>
+  <timestampTool>plaso</timestampTool>
+  <timeZone>utc</timeZone>
   <compress default="true">zip</compress>
   <checksum>md5</checksum>
   <receipt>html</receipt>
