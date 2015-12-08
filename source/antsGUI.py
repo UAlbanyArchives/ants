@@ -286,7 +286,7 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText18.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText18, 0, wx.ALL, 5 )
 		
-		self.transferLocInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["transferLocation"], wx.DefaultPosition, wx.Size( 250,-1 ), 0 )
+		self.transferLocInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["transferLocation"], wx.DefaultPosition, wx.Size( 300,-1 ), 0 )
 		fgSizer9.Add( self.transferLocInput, 0, wx.ALL, 5 )
 		
 		self.checkLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Transfer Location", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -296,7 +296,7 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText21.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText21, 0, wx.ALL, 5 )
 		
-		self.receiveInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["receiveLocation"], wx.DefaultPosition, wx.Size( 250,-1 ) )
+		self.receiveInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["receiveLocation"], wx.DefaultPosition, wx.Size( 300,-1 ) )
 		fgSizer9.Add( self.receiveInput, 0, wx.ALL, 5 )
 		
 		self.checkReceiveLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Receive Location", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -306,7 +306,7 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText19.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText19, 0, wx.ALL, 5 )
 		
-		self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 250,-1 ) )
+		self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 300,-1 ) )
 		fgSizer9.Add( self.loginInput, 0, wx.ALL, 5 )
 		
 		fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
@@ -315,7 +315,7 @@ class mainFrame ( wx.Frame ):
 		self.m_staticText20.Wrap( -1 )
 		fgSizer9.Add( self.m_staticText20, 0, wx.ALL, 5 )
 		
-		self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 250,-1 ), wx.TE_PASSWORD )
+		self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 300,-1 ), wx.TE_PASSWORD )
 		fgSizer9.Add( self.passwordInput, 0, wx.ALL, 5 )
 		
 		
@@ -420,8 +420,9 @@ class mainFrame ( wx.Frame ):
 		self.m_button5.Bind( wx.EVT_BUTTON, self.viewReceipt )
 		self.m_button61.Bind( wx.EVT_BUTTON, self.saveReceipt )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.updateConfig )
-		self.checkLocation.Bind( wx.EVT_BUTTON, self.testLocation )
-		self.checkReceiveLocation.Bind( wx.EVT_BUTTON, self.testRecieveLocation )
+		self.checkLocation.Bind( wx.EVT_BUTTON, self.testTransferLocation )
+		self.receiveFiles.Bind( wx.EVT_BUTTON, self.checkforFiles )
+		self.checkReceiveLocation.Bind( wx.EVT_BUTTON, self.testReceiveLocation )
 		self.Bind( wx.EVT_CLOSE, self.closeANTS )
 		
 		#show info from old ~directory.xml on load

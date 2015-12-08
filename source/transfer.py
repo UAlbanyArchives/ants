@@ -13,6 +13,8 @@ import copy
 
 def transferModule(self):
 	
+	######################################################################################################################
+	
 	def packageSIP(pathTransfer, dirXML):
 		
 		#update accession count

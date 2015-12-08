@@ -84,6 +84,7 @@ class spashDialog( wx.Dialog ):
 			bSizer49.Add( self.m_hyperlink2, 0, wx.ALL|wx.ALIGN_RIGHT, 5 )
 			
 			self.m_button2.Bind( wx.EVT_BUTTON, self.viewReceipt )
+			self.m_button3.Bind( wx.EVT_BUTTON, self.checkforFiles )
 			self.m_hyperlink2.Bind( wx.EVT_HYPERLINK, self.openCredits)
 			self.m_hyperlink3.Bind( wx.EVT_HYPERLINK, self.aboutBox)
 			self.Bind( wx.EVT_CLOSE, self.closeProgram )
@@ -111,43 +112,14 @@ class spashDialog( wx.Dialog ):
 			self.m_button1.Bind( wx.EVT_BUTTON, self.runANTS )
 	
 	def viewReceipt(self, event):
-		if not os.path.isfile("receipt.xml"):
-			noReceipt = wx.MessageDialog(None, 'Unable to find a receipt. You must tranfer files in order to obtain a receipt.', 'Ne Receipt found', wx.OK | wx.ICON_WARNING)
-			noReceipt.ShowModal()
-		else:
-			parser = ET.XMLParser(remove_blank_text=True)
-			configParse = ET.parse("config.xml", parser)
-			configXML = configParse.getroot()
-			import tempfile
-			tempDir = tempfile.mkdtemp()
-			if configXML.find("receipt").text.lower().strip() == "csv":
-				import csv
-				headLine = ["accession", "submitted", "type", "name", "path", "id"]
-				tempCSV = open(os.path.join(tempDir, 'receipt.csv'), 'wb')
-				csv = csv.writer(tempCSV)
-				csv.writerow(headLine)
-				parser = ET.XMLParser(remove_blank_text=True)
-				receiptParse = ET.parse("receipt.xml", parser)
-				receiptXML = receiptParse.getroot()
-				for accession in receiptXML:
-					number = accession.attrib['number']
-					submitted = accession.attrib['submitted']
-					for item in accession:
-						if item.tag == "item":
-							itemList = [number, submitted, item.find('type').text, item.find('name').text, item.find('path').text, item.find('id').text]
-							csv.writerow(itemList)
-				tempCSV.close()
-				subprocess.Popen(os.path.join(tempDir, "receipt.csv"), shell=True)
-			elif configXML.find("receipt").text.lower().strip() == "xml":
-				shutil.copy2("receipt.xml", tempDir)
-				subprocess.Popen(os.path.join(tempDir, "receipt.xml"), shell=True)
-			else:
-				from html import htmlReceipt
-				htmlString = htmlReceipt("receipt.xml", str(datetime.datetime.now()), "config.xml")
-				htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
-				htmlFile.write(htmlString)
-				htmlFile.close()
-				subprocess.Popen(os.path.join(tempDir, "receipt.html"), shell=True)
+		from receiptReceive import produceReceipt
+		xmlSource = True
+		produceReceipt(self, xmlSource)
+	
+	def checkforFiles(self, event):
+		from receiptReceive import checkReceiveFiles
+		xmlSource = True
+		checkReceiveFiles(self, xmlSource)
 	
 	def openCredits(self, event):
 		loadCredits = CreditsFrame(self)

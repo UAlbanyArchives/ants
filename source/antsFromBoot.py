@@ -11,6 +11,7 @@ import datetime
 import subprocess
 import admin
 from transfer import transferModule
+import ftplib
  
 #import the newly created GUI file
 import antsGUI as gui
@@ -317,7 +318,7 @@ class ANTSFrame(gui.mainFrame):
 			file = open("config.xml", "w")
 			file.write(configString)
 			file.close()
-			wx.MessageBox('Default has been updated.', 'Info',  wx.OK | wx.ICON_INFORMATION)	
+			wx.MessageBox('Default configuration has been updated.', 'Default Updated',  wx.OK | wx.ICON_INFORMATION)	
 	
 	def descRecord(self, event):
 		dirFile = "~directory.xml"
@@ -445,37 +446,51 @@ class ANTSFrame(gui.mainFrame):
 			selectionsOutput = ", \n".join(selectionList)
 			self.rcdAccessInput.AppendText(selectionsOutput)
 					
-	def testLocation(self, event):
+	def testLocation(self, location):
+		if not len(location) > 0:
+			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
+			noLoc.ShowModal()
+		else:
+			if self.m_radioBox1.GetSelection() == 0:
+				#test path location
+				if os.path.isdir(location):
+					goodDir = wx.MessageDialog(None, 'The directory you entered is correct.', 'Found Directory', wx.OK | wx.ICON_INFORMATION)
+					goodDir.ShowModal()
+				else:
+					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
+					badDir.ShowModal()
+			else:
+				#test FTP location and login
+				login = self.loginInput.GetValue()
+				pw = base64.b64decode(self.passwordInput.GetValue())
+				ftp = ftplib.FTP(location, login, pw)
+				print "success!"
+				ftp.quit()
+				"""
+				try:
+					ftp = ftplib.FTP(location, login, pw)
+					print "success!"
+					#print ftp.nlst()
+					ftp.quit()
+					goodDir = wx.MessageDialog(None, 'Attempt to login to FTP server was successful', 'FTP Login Successful', wx.OK | wx.ICON_INFORMATION)
+					goodDir.ShowModal()
+				except:
+					badDir = wx.MessageDialog(None, 'Invalid location, unable to login to FTP server.', 'Incorrect Location or Login', wx.OK | wx.ICON_EXCLAMATION)
+					badDir.ShowModal()
+				"""
+	
+	def testTransferLocation(self, event):
 		location = self.transferLocInput.GetValue()
-		if not len(location) > 0:
-			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
-			noLoc.ShowModal()
-		else:
-			if self.m_radioBox1.GetSelection() == 0:
-				if os.path.isdir(location):
-					goodDir = wx.MessageDialog(None, 'The directory you entered is correct.', 'Found Directory', wx.OK | wx.ICON_INFORMATION)
-					goodDir.ShowModal()
-				else:
-					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
-					badDir.ShowModal()
-			else:
-				print location
+		self.testLocation(location)
 				
-	def testRecieveLocation(self, event):
+	def testReceiveLocation(self, event):
 		location = self.receiveInput.GetValue()
-		if not len(location) > 0:
-			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
-			noLoc.ShowModal()
-		else:
-			if self.m_radioBox1.GetSelection() == 0:
-				if os.path.isdir(location):
-					goodDir = wx.MessageDialog(None, 'The directory you entered is correct.', 'Found Directory', wx.OK | wx.ICON_INFORMATION)
-					goodDir.ShowModal()
-				else:
-					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
-					badDir.ShowModal()
-			else:
-				print location
+		self.testLocation(location)
+	
+	def checkforFiles(self, event):
+		from receiptReceive import checkReceiveFiles
+		xmlSource = False
+		checkReceiveFiles(self, xmlSource)
 	
 	def updateNotes(self, event):
 		dirFile = "~directory.xml"
@@ -529,12 +544,9 @@ class ANTSFrame(gui.mainFrame):
 		return receiptFile, wildcard, defaultFile
 	
 	def viewReceipt(self, event):
-		if not os.path.isfile("receipt.xml"):
-			noReceipt = wx.MessageDialog(None, 'Unable to find a receipt. You must tranfer files in order to obtain a receipt.', 'Ne Receipt found', wx.OK | wx.ICON_WARNING)
-			noReceipt.ShowModal()
-		else:
-			receiptFile,  wildcard, defaultFile = self.buildReceipt(self)
-			subprocess.Popen(receiptFile, shell=True)
+		from receiptReceive import produceReceipt
+		xmlSource = False
+		produceReceipt(self, xmlSource)
 		
 	def saveReceipt(self, event):
 		if not os.path.isfile("receipt.xml"):
