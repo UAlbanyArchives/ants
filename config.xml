@@ -14,7 +14,7 @@
   <receiveLocation>C:\Projects\ants\destination\request</receiveLocation>
   <login/>
   <pw/>
-  <timestampTool>plaso</timestampTool>
+  <timestampTool>os.stat</timestampTool>
   <timeZone>utc</timeZone>
   <compress default="true">zip</compress>
   <checksum>md5</checksum>
