@@ -1,0 +1,36 @@
+# Names should be added to this file with this pattern:
+#
+# For individuals:
+#   Name (email address)
+#
+# For organizations:
+#   Organization (fnmatch pattern)
+#
+# See python fnmatch module documentation for more information.
+
+Google Inc. (*@google.com)
+Kristinn Gudjonsson (kiddi@kiddaland.net)
+Joachim Metz (joachim.metz@gmail.com)
+Brian Baskin (brian@thebaskins.com)
+David Nides (david.nides@gmail.com)
+Dominique Kilman (lexistar97@gmail.com)
+Elizabeth Schweinsberg (beth@bethlogic.net)
+Eric Mak (ericmak@gmail.com)
+Francesco Picasso (francesco.picasso@gmail.com)
+Joaquin Moreno Garijo (Joaquin.MorenoGarijo.2013@live.rhul.ac.uk)
+Keith Wall (kwallster@gmail.com)
+Marc Seguin (segumarc@gmail.com)
+Oliver Jensen (ojensen5115@gmail.com)
+Petter Bjelland (petter.bjelland@gmail.com)
+Ashley Holtz (ashley.a.holtz@gmail.com)
+Preston Miller (preston.miller@dpmforensics.com)
+Eric John (ej.infotech@gmail.com)
+Daniel White (onager@deerpie.com)
+Johan Berggren (jberggren@gmail.com)
+DC3 (dc3.plaso@gmail.com)
+Omer Yampel (omeryampel@gmail.com)
+Jason Blanks (jason.blanks@gmail.com)
+Georg Lukas (georg@op-co.de)
+Jerome Marty (jahrome11@gmail.com)
+Marc Leavitt (Marc.Leavitt@fmr.com)
+

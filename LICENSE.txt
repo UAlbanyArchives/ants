@@ -1,8 +1,8 @@
-ANTS: Archives Network Transfer System is govered by the MIT Licence
+ANTS: Archives Network Transfer System is govered by the MIT License
 
 bagit is public domain
-MFTRcrd is govered by the MIT Licence
-Plaso is governed by the Apache License
+MFTRcrd is govered by the MIT License (LICENSE.md included)
+Plaso is governed by the Apache License (LICENSE.txt included)
 
 The MIT License (MIT)
 
