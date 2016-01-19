@@ -3,6 +3,7 @@ import os
 import subprocess
 from lxml import etree as ET
 from ftplib import FTP
+from ftplib import FTP_TLS
 import traceback
 import datetime
 import shutil
@@ -17,14 +18,17 @@ def produceReceipt(self, xmlSource):
 	else:
 	
 		if xmlSource == True:
-			configXML = os.path.join(self.appData, "config.xml")
-			parser = ET.XMLParser(remove_blank_text=True)
-			configParse = ET.parse(configXML, parser)
-			config = configParse.getroot()
-			if config.find("receipt").text is None:
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("receipt").text is None:
+					receipt = "html"
+				else:
+					receipt = config.find("receipt").text
+			except:
 				receipt = "html"
-			else:
-				receipt = config.find("receipt").text
 		else:
 			if self.receiptOption.GetSelection() == 1:
 				receipt = "csv"
@@ -77,12 +81,15 @@ def checkReceiveFiles(self, xmlSource):
 	try:	
 		#get the information needed from config.xml for the splash screen or the GUI from the options tab
 		if xmlSource == True:
-			configXML = os.path.join(self.appData, "config.xml")
-			parser = ET.XMLParser(remove_blank_text=True)
-			configParse = ET.parse(configXML, parser)
-			config = configParse.getroot()
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+			except:
+				raise ValueError("Configuration data not found. ANTS needs a transfer method and a receive location to receive files. Please select \"Browse\" to start the application and enter this information in the \"Options\" tab.")
 			if config.find("transferMethod").text is None or config.find("receiveLocation").text is None:
-				raise ValueError("Failed to receive files, both the transfer method and receive location must be entered in the config file.")
+				raise ValueError("Configuration data not found. ANTS needs a transfer method and a receive location to receive files. Please select \"Browse\" to start the application and enter this information in the \"Options\" tab.")
 			transferMethod = config.find("transferMethod").text
 			receiveLocation = config.find("receiveLocation").text
 			if transferMethod != "network":
@@ -92,21 +99,36 @@ def checkReceiveFiles(self, xmlSource):
 				getPw = binascii.unhexlify(config.find("pw").text)
 				pw = win32crypt.CryptUnprotectData(getPw)[1].replace("\x00", "").encode('ascii', 'replace')
 		else:
-			if self.m_radioBox1.GetSelection() == 0:
-				transferMethod = "network"
-			else:
-				transferMethod = "ftp"
+			try:
+				login = self.loginInput.GetValue()
+			except:
+				login = ""
+			try:
+				pw = self.passwordInput.GetValue()
+			except:
+				pw = ""
+		
 			receiveLocation = self.receiveInput.GetValue()
 			if len(receiveLocation) < 1:
 				raise ValueError("Failed to receive files, you must enter a local or network path as your transfer destination")
-			if transferMethod == "ftp":
-				login = self.loginInput.GetValue()
-				pw = self.passwordInput.GetValue()
-				if len(login) < 1:
-					raise ValueError("Failed to receive files, you must enter a login to recieve files by FTP.")
-				if len(pw) < 1:
-					raise ValueError("Failed to receive files, you must enter a password to recieve files by FTP.")
-		
+			
+			if self.m_radioBox1.GetSelection() == 0:
+				transferMethod = "network"
+			elif self.m_radioBox1.GetSelection() == 2:
+				transferMethod = "ftptls"
+			elif self.m_radioBox1.GetSelection() == 3:
+				transferMethod = "onedrive"
+			else:
+				transferMethod = "ftp"
+			
+		#login for non-network transfers
+		if transferMethod != "network":
+			if len(login) < 1 or len(pw) < 1:
+				login, pw = self.loginBox(login, pw)
+					
+				
+				
+		#Actual Transfers code
 		if transferMethod == "network":
 			if not os.path.isdir(receiveLocation): 
 				#directory not found, try to make it?
@@ -163,6 +185,9 @@ def checkReceiveFiles(self, xmlSource):
 								saveProgress.Update(saveCount, saveMsg)
 					saveRequest.Destroy()
 			selectFiles.Destroy()
+		elif transferMethod =="onedrive":
+			pass #in development
+		
 		else:
 			
 			def isdirFTP(ftp, name):
@@ -189,11 +214,19 @@ def checkReceiveFiles(self, xmlSource):
 				receiveLocation = receiveLocation[6:]
 				
 			ftpURL = receiveLocation.split("/")
-			ftp = FTP(ftpURL[0])
-			try:
-				ftp.login(login, pw)
-			except:
-				raise ValueError("Incorrect Login or Password.")
+			if transferMethod =="ftptls":
+				ftp = FTP_TLS(ftpURL[0])
+				try:
+					ftp.login(login, pw)
+					ftp.prot_p()
+				except:
+					raise ValueError("Incorrect Login or Password, or incorrect encryption settings in FTP server.")
+			else:
+				ftp = FTP(ftpURL[0])
+				try:
+					ftp.login(login, pw)
+				except:
+					raise ValueError("Incorrect Login or Password.")
 			
 			ftpURL.pop(0)
 			baseDir = ""
@@ -250,7 +283,7 @@ def checkReceiveFiles(self, xmlSource):
 
 			ftp.quit()
 		
-	except:
+	except (Exception, ValueError) as e:
 		#Error message that logs and shows error, but does not exit programs
 		exceptMsg = traceback.format_exc()
 		errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.utcnow()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
@@ -258,12 +291,14 @@ def checkReceiveFiles(self, xmlSource):
 		file = open(os.path.join(self.appData, "errorLog.txt"), "a")
 		file.write(errorOutput)
 		file.close()
-		if not os.path.isfile(configXML) or config is None: 
-			noConfig = wx.MessageDialog(None, "Configuration data not found. ANTS needs a transfer method and a receive location to receive files. Please select \"Browse\" to start the application and enter this information in the \"Options\" tab.", "Failed to Receive Files", wx.OK | wx.ICON_WARNING)
-			noConfig.ShowModal()
-		elif config.find("transferMethod").text is None or config.find("receiveLocation").text is None:
-			noConfigData = wx.MessageDialog(None, "Configuration data not found. ANTS needs a transfer method and a receive location to receive files. Please select \"Browse\" to start the application and enter this information in the \"Options\" tab.", "Failed to Receive Files", wx.OK | wx.ICON_WARNING)
-			noConfigData.ShowModal()
-		else:
-			errorPopup = wx.MessageDialog(None, "Failed to Receive Files" + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
-			errorPopup.ShowModal()
+		try:
+			configXML = os.path.join(self.appData, "config.xml")
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			if config.find("error").text == "minimal":
+				exceptMsg = e
+		except:
+			pass
+		errorPopup = wx.MessageDialog(None, "Failed to Receive Files" + "\n\n" + str(exceptMsg), "Failed to Receive Files", wx.OK | wx.ICON_ERROR)
+		errorPopup.ShowModal()

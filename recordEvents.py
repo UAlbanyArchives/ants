@@ -4,7 +4,6 @@ import time
 import csv
 import os
 import sys
-import traceback
 import calendar
 import datetime
 from cStringIO import StringIO
@@ -152,8 +151,7 @@ def recordEvents(self, dirXML):
 						eventMFTRCRD.text = "ran MFTRCRD to gather NTFS timestamps"
 						item.find("curatorialEvents").append(eventMFTRCRD)
 					except:
-						exceptMsg = traceback.format_exc()
-						raise ValueError("Failed to parse MFTRCRD output. \n" + exceptMsg)
+						raise ValueError("Failed to parse MFTRCRD output.")
 				self.progressCount = self.progressCount + 1
 		print "ran MFTRCRD"
 		
@@ -261,8 +259,7 @@ def recordEvents(self, dirXML):
 				print "ran PLASO"
 				self.progressCount = self.progressCount + 1
 			except:
-				exceptMsg = traceback.format_exc()
-				raise ValueError("Failed to run Plaso. \n" + exceptMsg)
+				raise ValueError("Failed to run Plaso.")
 
 		
 	return dirXML

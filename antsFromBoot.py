@@ -14,6 +14,7 @@ import subprocess
 import admin
 from transfer import transferModule
 from ftplib import FTP
+from ftplib import FTP_TLS
  
 #import the newly created GUI file
 import antsGUI as gui
@@ -23,6 +24,8 @@ import antsGUI as gui
 class ANTSFrame(gui.mainFrame):
 	#constructor
 	def __init__(self, parent):
+		
+		antsVersion = "0.5 (beta)"
 		
 		#checks if booted with admin privileges
 		self.adminTest = False
@@ -54,11 +57,15 @@ class ANTSFrame(gui.mainFrame):
 				transferLocationXML = ET.SubElement(antsConfigXML, 'transferLocation')
 				receiveLocationXML = ET.SubElement(antsConfigXML, 'receiveLocation')
 				loginXML = ET.SubElement(antsConfigXML, 'login')
+				loginXML.set("store", "true")
 				pwXML = ET.SubElement(antsConfigXML, 'pw')
+				pwXML.set("store", "true")
 				timeZoneXML = ET.SubElement(antsConfigXML, 'timeZone')
 				timestampXML = ET.SubElement(antsConfigXML, 'timestampTool')
+				errorXML = ET.SubElement(antsConfigXML, 'error')
 				compressXML = ET.SubElement(antsConfigXML, 'compress')
 				compressXML.set("default", "true")
+				compressXML.set("lock", "false")
 				checksumXML = ET.SubElement(antsConfigXML, 'checksum')
 				receiptXML = ET.SubElement(antsConfigXML, 'receipt')
 				requestEmailXML = ET.SubElement(antsConfigXML, 'requestEmail')
@@ -77,7 +84,11 @@ class ANTSFrame(gui.mainFrame):
 				getPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
 			else:
 				getPw = ""
-			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), "email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), "transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), "password": getPw, "timestampTool": self.readXML(config, "timestampTool"), "timeZone": self.readXML(config, "timeZone"), "compress": self.readXML(config, "compress"), "checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt")}
+			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), \
+			"email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), \
+			"transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), \
+			"password": getPw, "timestampTool": self.readXML(config, "timestampTool"), "timeZone": self.readXML(config, "timeZone"), "error": self.readXML(config, "error"), "compress": self.readXML(config, "compress"), \
+			"checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt"), "compressCheckList": config.find("compress").attrib["lock"], "loginStore": config.find("login").attrib["store"], "pwStore": config.find("pw").attrib["store"]}
 			if "default" in config.find('compress').attrib:
 				configData.update({"compressDefault": config.find('compress').attrib["default"]})
 		except:
@@ -98,7 +109,7 @@ class ANTSFrame(gui.mainFrame):
 					dialogBrowse.Destroy()
 				except:
 					exceptMsg = traceback.format_exc()
-					self.errorDialog("Failed to browse for directory.", exceptMsg,)
+					self.errorDialog("Failed to browse for directory.", exceptMsg)
 
 			#read directory to ~directory.xml with updated accession count from config.xml
 			try:
@@ -135,6 +146,7 @@ class ANTSFrame(gui.mainFrame):
 				folderDesc = ET.SubElement(folderXML, "description")
 				folderAccess = ET.SubElement(folderXML, "access")
 				curatorialEvent = ET.SubElement(folderXML, "curatorialEvents")
+				curatorialEvent.set("version", antsVersion)
 				def dir2XML(path, root):
 					for item in os.listdir(path):
 						itempath = os.path.join(path, item)
@@ -168,7 +180,7 @@ class ANTSFrame(gui.mainFrame):
 				file.close()
 			except:
 				exceptMsg = traceback.format_exc()
-				self.errorDialog("Could not read the directory you selected", exceptMsg,)
+				self.errorDialog("Could not read the directory you selected", exceptMsg)
 			
 		if len(sys.argv) == 2:
 			param = sys.argv[1]
@@ -240,6 +252,10 @@ class ANTSFrame(gui.mainFrame):
 			exceptMsg = traceback.format_exc()
 			self.errorDialog("Could not load GUI", exceptMsg)
  
+ ######################################################################################################################################
+ #Functions:
+ ######################################################################################################################################
+ 
 	#Runs the transferModule to package and move SIP
 	def transferFiles(self, event):
 		try:
@@ -252,7 +268,7 @@ class ANTSFrame(gui.mainFrame):
 				noTransferData.ShowModal()
 			else:
 				transferModule(self)
-		except:
+		except (Exception, ValueError) as e:
 			#error Dialog that doesn't close ANTS
 			exceptMsg = traceback.format_exc()
 			print exceptMsg
@@ -261,7 +277,16 @@ class ANTSFrame(gui.mainFrame):
 			file.write(errorOutput)
 			file.close()
 			self.progressBar.Destroy()
-			errorPopup = wx.MessageDialog(None, "Transfer Error" + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("error").text == "minimal":
+					exceptMsg = e
+			except:
+				pass
+			errorPopup = wx.MessageDialog(None, str(exceptMsg), "Transfer Error", wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 			errorPopup.ShowModal()
 	
 	def errorDialog(self, errorMsg, exceptMsg):
@@ -273,7 +298,18 @@ class ANTSFrame(gui.mainFrame):
 		file.close()
 		if os.path.isfile(os.path.join(self.appData, "~directory.xml")):
 			os.remove(os.path.join(self.appData, "~directory.xml"))
-		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
+		try:
+			configXML = os.path.join(self.appData, "config.xml")
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			if config.find("error").text == "minimal":
+				popupMsg = errorMsg
+			else:
+				popupMsg = errorMsg + "\n\n" + str(exceptMsg)
+		except:
+			popupMsg = errorMsg + "\n\n" + str(exceptMsg)
+		errorPopup = wx.MessageDialog(None, popupMsg, "ERROR", wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 		errorPopup.ShowModal()
 		sys.exit()
 		
@@ -284,79 +320,108 @@ class ANTSFrame(gui.mainFrame):
 		file = open(os.path.join(self.appData, "errorLog.txt"), "a")
 		file.write(errorOutput)
 		file.close()
-		errorPopup = wx.MessageDialog(None, errorMsg + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
+		try:
+			configXML = os.path.join(self.appData, "config.xml")
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			if config.find("error").text == "minimal":
+				popupMsg = errorMsg
+			else:
+				popupMsg = errorMsg + "\n\n" + str(exceptMsg)
+		except:
+			popupMsg = errorMsg + "\n\n" + str(exceptMsg)
+		errorPopup = wx.MessageDialog(None, popupMsg, "ERROR", wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 		errorPopup.ShowModal()
-		sys.exit()
 	
 	def closeANTS(self, event):
 		self.Destroy()
 	
 	def readXML(self, element, field):
-		if element.find(field).text:
+		if element.find(field) is None:
+			value = ""
+		elif element.find(field).text:
 			value = element.find(field).text
 		else:
 			value =""
 		return value
 	
 	def updateConfig(self, event):
-		sureUpdate = wx.MessageDialog(None, 'Are your sure you want to update the default configuration?', 'Update Default Configuration', wx.YES_NO | wx.ICON_QUESTION)
-		updateResult = sureUpdate.ShowModal()
-		if updateResult == wx.ID_YES:
-			configXML = os.path.join(self.appData, "config.xml")
-			parser = ET.XMLParser(remove_blank_text=True)
-			configParse = ET.parse(configXML, parser)
-			config = configParse.getroot()
-			config.find('creator').text = self.creatorInput.GetValue()
-			config.find('creatorId').text = self.creatorIdInput.GetValue()
-			config.find('donor').text = self.donorInput.GetValue()
-			config.find('role').text = self.positionInput.GetValue()
-			config.find('email').text = self.emailInput.GetValue()
-			config.find('office').text = self.officeInput.GetValue()
-			config.find('address1').text = self.address1Input.GetValue()
-			config.find('address2').text = self.address2Input.GetValue()
-			config.find('address3').text = self.address3Input.GetValue()
-			if self.m_radioBox1.GetSelection() == 1:
-				config.find('transferMethod').text = "ftp"
-			else:
-				config.find('transferMethod').text = "network"
-			config.find('login').text = self.loginInput.GetValue()
-			config.find('transferLocation').text = self.transferLocInput.GetValue()
-			config.find('receiveLocation').text = self.receiveInput.GetValue()
-			pwd = win32crypt.CryptProtectData(self.passwordInput.GetValue())
-			config.find('pw').text = binascii.hexlify(pwd)
-			if self.timeZoneOption.GetSelection() == 0:
-				config.find('timeZone').text = "local"
-			elif self.timeZoneOption.GetSelection() == 1:
-				config.find('timeZone').text = "posix"
-			elif self.timeZoneOption.GetSelection() == 2:
-				config.find('timeZone').text = "utc"
-			if self.timestampOption.GetSelection() == 0:
-				config.find('timestampTool').text = "os.stat"
-			else:
-				config.find('timestampTool').text = "plaso"
-			if self.compressOption.GetSelection() == 0:
-				config.find('compress').text = "zip"
-			else:
-				config.find('compress').text = "gzip"
-			if self.compressCheck.IsChecked() is True:
-				config.find('compress').set("default", "true")
-			else:
-				config.find('compress').set("default", "false")
-			if self.hashOption.GetSelection() == 0:
-				config.find('checksum').text = "md5"
-			else:
-				config.find('checksum').text = "sha256"
-			if self.receiptOption.GetSelection() == 0:
-				config.find('receipt').text = "html"
-			elif self.receiptOption.GetSelection() == 1:
-				config.find('receipt').text = "csv"
-			else:
-				config.find('receipt').text = "xml"
-			configString = ET.tostring(config, pretty_print=True)
-			file = open(os.path.join(self.appData, "config.xml"), "w")
-			file.write(configString)
-			file.close()
-			wx.MessageBox('Default configuration has been updated.', 'Default Updated',  wx.OK | wx.ICON_INFORMATION)	
+		try:
+			sureUpdate = wx.MessageDialog(None, 'Are your sure you want to update the default configuration?', 'Update Default Configuration', wx.YES_NO | wx.ICON_QUESTION)
+			updateResult = sureUpdate.ShowModal()
+			if updateResult == wx.ID_YES:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				config.find('creator').text = self.creatorInput.GetValue()
+				config.find('creatorId').text = self.creatorIdInput.GetValue()
+				config.find('donor').text = self.donorInput.GetValue()
+				config.find('role').text = self.positionInput.GetValue()
+				config.find('email').text = self.emailInput.GetValue()
+				config.find('office').text = self.officeInput.GetValue()
+				config.find('address1').text = self.address1Input.GetValue()
+				config.find('address2').text = self.address2Input.GetValue()
+				config.find('address3').text = self.address3Input.GetValue()
+				if self.m_radioBox1.GetSelection() == 1:
+					config.find('transferMethod').text = "ftp"
+				elif self.m_radioBox1.GetSelection() == 2:
+					config.find('transferMethod').text = "ftptls"
+				elif self.m_radioBox1.GetSelection() == 3:
+					config.find('transferMethod').text = "onedrive"
+				else:
+					config.find('transferMethod').text = "network"
+				if config.find("login").attrib["store"].lower() == "true":
+					config.find('login').text = self.loginInput.GetValue()
+				config.find('transferLocation').text = self.transferLocInput.GetValue()
+				config.find('receiveLocation').text = self.receiveInput.GetValue()
+				if config.find("pw").attrib["store"].lower() == "true":
+					pwd = win32crypt.CryptProtectData(self.passwordInput.GetValue())
+					config.find('pw').text = binascii.hexlify(pwd)
+				if self.timeZoneOption.GetSelection() == 0:
+					config.find('timeZone').text = "local"
+				elif self.timeZoneOption.GetSelection() == 1:
+					config.find('timeZone').text = "posix"
+				elif self.timeZoneOption.GetSelection() == 2:
+					config.find('timeZone').text = "utc"
+				if self.timestampOption.GetSelection() == 0:
+					config.find('timestampTool').text = "os.stat"
+				else:
+					config.find('timestampTool').text = "plaso"
+				if self.errorOption.GetSelection() == 0:
+					config.find('error').text = "minimal"
+				else:
+					config.find('error').text = "verbose"
+				if self.compressOption.GetSelection() == 0:
+					config.find('compress').text = "zip"
+				else:
+					config.find('compress').text = "gzip"
+				if config.find("compress").attrib["lock"].lower() == "true":
+					pass
+				else:
+					if self.compressCheck.IsChecked() is True:
+						config.find('compress').set("default", "true")
+					else:
+						config.find('compress').set("default", "false")
+				if self.hashOption.GetSelection() == 0:
+					config.find('checksum').text = "md5"
+				else:
+					config.find('checksum').text = "sha256"
+				if self.receiptOption.GetSelection() == 0:
+					config.find('receipt').text = "html"
+				elif self.receiptOption.GetSelection() == 1:
+					config.find('receipt').text = "csv"
+				else:
+					config.find('receipt').text = "xml"
+				configString = ET.tostring(config, pretty_print=True)
+				file = open(os.path.join(self.appData, "config.xml"), "w")
+				file.write(configString)
+				file.close()
+				wx.MessageBox('Default configuration has been updated.', 'Default Updated',  wx.OK | wx.ICON_INFORMATION)
+		except:
+			exceptMsg = traceback.format_exc()
+			self.errorMessage("Failed update default configuration. You may need to update your config.xml file.", exceptMsg)
 	
 	def descRecord(self, event):
 		dirFile = os.path.join(self.appData, "~directory.xml")
@@ -484,6 +549,74 @@ class ANTSFrame(gui.mainFrame):
 			selectionsOutput = ", \n".join(selectionList)
 			self.rcdAccessInput.AppendText(selectionsOutput)
 					
+	def loginBox(self, emptyLogin, emptyPw):
+		loginDialog = wx.Dialog(self, id = wx.ID_ANY, title = "Login", pos = wx.DefaultPosition, size = (230,170), style = wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+		loginDialog.Center()
+		def onLogin(self):
+			loginDialog.Destroy()
+		
+		#login box GUI
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		loginSizer = wx.BoxSizer( wx.VERTICAL )
+		#loginSizer.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		loginGrid = wx.FlexGridSizer( 3, 2, 0, 0 )
+		loginGrid.SetFlexibleDirection( wx.BOTH )
+		loginGrid.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		self.userText = wx.StaticText( loginDialog, wx.ID_ANY, u"User:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.userText.Wrap( -1 )
+		loginGrid.Add( self.userText, 0, wx.ALL|wx.ALIGN_LEFT, 5 )
+		self.enterUser = wx.TextCtrl( loginDialog, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.enterUser.SetLabel(emptyLogin)
+		loginGrid.Add( self.enterUser, 0, wx.ALL, 5 )
+		self.pwText = wx.StaticText( loginDialog, wx.ID_ANY, u"Password:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.pwText.Wrap( -1 )
+		loginGrid.Add( self.pwText, 0, wx.ALL|wx.ALIGN_LEFT, 5 )
+		self.enterPassword = wx.TextCtrl( loginDialog, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD|wx.TE_PROCESS_ENTER)
+		self.enterPassword.SetLabel(emptyPw)
+		loginGrid.Add( self.enterPassword, 0, wx.ALL, 5 )
+		loginGrid.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		self.rememberBox = wx.CheckBox( loginDialog, wx.ID_ANY, u"Remember Me", wx.DefaultPosition, wx.DefaultSize, 0 )
+		loginGrid.Add( self.rememberBox, 0, wx.ALL, 5 )
+		loginSizer.Add( loginGrid, 1, wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		buttonSizer = wx.BoxSizer( wx.VERTICAL )
+		self.loginButton = wx.Button( loginDialog, wx.ID_ANY, u"Login", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.loginButton.Bind(wx.EVT_BUTTON, onLogin)
+		buttonSizer.Add( self.loginButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		loginSizer.Add( buttonSizer, 1, 5 )
+		if len(emptyLogin) < 1:
+			self.enterUser.SetFocus()
+		elif len(emptyPw) < 1:
+			self.enterPassword.SetFocus()
+		else:
+			self.loginButton.SetFocus()
+		loginDialog.SetSizer(loginSizer)
+		
+		result = loginDialog.ShowModal()
+		if self.rememberBox.IsChecked():
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("login").attrib["store"].lower() == "true":
+					config.find("login").text = self.enterUser.GetValue()
+					try:
+						self.loginInput.SetLabel(self.enterUser.GetValue())
+					except:
+						pass
+				if config.find("pw").attrib["store"].lower() == "true":
+					config.find("pw").text = self.enterPassword.GetValue()
+					try:
+						self.passwordInput.SetLabel(self.enterPassword.GetValue())
+					except:
+						pass
+			except:
+				pass
+		login = self.enterUser.GetValue()
+		pw = self.enterPassword.GetValue()
+		return login, pw
+		
+	
 	def testLocation(self, location):
 		if not len(location) > 0:
 			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
@@ -497,21 +630,50 @@ class ANTSFrame(gui.mainFrame):
 				else:
 					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
 					badDir.ShowModal()
+			elif  self.m_radioBox1.GetSelection() == 3:
+				#test OneDrive login
+				#login = self.loginInput.GetValue()
+				#pw = self.passwordInput.GetValue()
+				#if len(login) < 1 or len(pw) < 1:
+					#login, pw = self.loginBox(login, pw)
+				pass #under development
 			else:
 				#test FTP location and login
 				try:
-					login = self.loginInput.GetValue()
-					pw = self.passwordInput.GetValue()
+					try:
+						login = self.loginInput.GetValue()
+					except:
+						login = ""
+					try:
+						pw = self.passwordInput.GetValue()
+					except:
+						pw = ""
+					if len(login) < 1 or len(pw) < 1:
+						login, pw = self.loginBox(login, pw)
 					if location.lower().startswith("ftp://"):
 						location = location[6:]
 					
 					ftpURL = location.split("/")
-					ftp = FTP(ftpURL[0])
-					#check login
-					try:
-						ftp.login(login, pw)
-					except:
-						raise ValueError("Incorrect Login or Password.")
+
+					if self.m_radioBox1.GetSelection() == 2:
+						ftp = FTP_TLS(ftpURL[0])
+						#check login
+						try:
+							ftp.login(login, pw)
+						except:
+							raise ValueError("Incorrect Login or Password, or incorrect encryption settings in FTP server.")
+						try:
+							ftp.prot_p() 
+						except:
+							raise ValueError("Error setting up encryption.")
+					else:
+						ftp = FTP(ftpURL[0])
+						#check login
+						try:
+							ftp.login(login, pw)
+						except:
+							raise ValueError("Incorrect Login or Password.")
+						
 					#check subdirectories
 					try:
 						ftpURL.pop(0)
@@ -523,9 +685,18 @@ class ANTSFrame(gui.mainFrame):
 					
 					goodDir = wx.MessageDialog(None, 'Attempt to login to FTP server was successful', 'FTP Login Successful', wx.OK | wx.ICON_INFORMATION)
 					goodDir.ShowModal()
-				except:
+				except (Exception, ValueError) as e:
 					exceptMsg = traceback.format_exc()
-					badDir = wx.MessageDialog(None, 'Could not connect to FTP Server: ' + exceptMsg, 'FTP error', wx.OK | wx.ICON_EXCLAMATION)
+					try:
+						configXML = os.path.join(self.appData, "config.xml")
+						parser = ET.XMLParser(remove_blank_text=True)
+						configParse = ET.parse(configXML, parser)
+						config = configParse.getroot()
+						if config.find("error").text == "minimal":
+							exceptMsg = e
+					except:
+						pass
+					badDir = wx.MessageDialog(None, 'Could not connect to FTP Server: ' + str(exceptMsg), 'FTP error', wx.OK | wx.ICON_EXCLAMATION)
 					badDir.ShowModal()
 	
 	def testTransferLocation(self, event):

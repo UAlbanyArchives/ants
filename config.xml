@@ -16,6 +16,7 @@
   <pw store="true"/>
   <timestampTool>os.stat</timestampTool>
   <timeZone>utc</timeZone>
+  <error>minimal</error>
   <compress default="true" lock="false">zip</compress>
   <checksum>md5</checksum>
   <receipt>html</receipt>

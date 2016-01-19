@@ -12,6 +12,8 @@ class spashDialog( wx.Dialog ):
 	
 	def __init__( self ):
 	
+		antsVersion = "0.5 (beta)"
+		
 		systemPass = False
 		if os.name == "nt":
 			systemPass = True
@@ -173,7 +175,7 @@ class spashDialog( wx.Dialog ):
 	def aboutBox(self, event):
 		info = wx.AboutDialogInfo()
 		info.Name = "ANTS: Archives Network Transfer System"
-		info.Version = "0.5 (beta)"
+		info.Version = antsVersion
 		info.Copyright = "(C) 2015-2016 Gregory Wiedeman"
 		info.Description = "ANTS gathers metadata and packages files for transfer to an institutional archives."
 		info.WebSite = ("http://library.albany.edu/archive/universityarchives", "Learn more about ANTS")
@@ -198,6 +200,65 @@ class spashDialog( wx.Dialog ):
 		except:
 			subprocess.Popen(boot, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.Close()
+			
+	def loginBox(self, emptyLogin, emptyPw):
+		loginDialog = wx.Dialog(self, id = wx.ID_ANY, title = "Login", pos = wx.DefaultPosition, size = (230,170), style = wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP )
+		loginDialog.Center()
+		def onLogin(self):
+			loginDialog.Destroy()
+		
+		#login box GUI
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		loginSizer = wx.BoxSizer( wx.VERTICAL )
+		#loginSizer.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		loginGrid = wx.FlexGridSizer( 3, 2, 0, 0 )
+		loginGrid.SetFlexibleDirection( wx.BOTH )
+		loginGrid.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		self.userText = wx.StaticText( loginDialog, wx.ID_ANY, u"User:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.userText.Wrap( -1 )
+		loginGrid.Add( self.userText, 0, wx.ALL|wx.ALIGN_LEFT, 5 )
+		self.enterUser = wx.TextCtrl( loginDialog, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.enterUser.SetLabel(emptyLogin)
+		loginGrid.Add( self.enterUser, 0, wx.ALL, 5 )
+		self.pwText = wx.StaticText( loginDialog, wx.ID_ANY, u"Password:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.pwText.Wrap( -1 )
+		loginGrid.Add( self.pwText, 0, wx.ALL|wx.ALIGN_LEFT, 5 )
+		self.enterPassword = wx.TextCtrl( loginDialog, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD|wx.TE_PROCESS_ENTER)
+		self.enterPassword.SetLabel(emptyPw)
+		loginGrid.Add( self.enterPassword, 0, wx.ALL, 5 )
+		loginGrid.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+		self.rememberBox = wx.CheckBox( loginDialog, wx.ID_ANY, u"Remember Me", wx.DefaultPosition, wx.DefaultSize, 0 )
+		loginGrid.Add( self.rememberBox, 0, wx.ALL, 5 )
+		loginSizer.Add( loginGrid, 1, wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		buttonSizer = wx.BoxSizer( wx.VERTICAL )
+		self.loginButton = wx.Button( loginDialog, wx.ID_ANY, u"Login", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.loginButton.Bind(wx.EVT_BUTTON, onLogin)
+		buttonSizer.Add( self.loginButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		loginSizer.Add( buttonSizer, 1, 5 )
+		if len(emptyLogin) < 1:
+			self.enterUser.SetFocus()
+		elif len(emptyPw) < 1:
+			self.enterPassword.SetFocus()
+		else:
+			self.loginButton.SetFocus()
+		loginDialog.SetSizer(loginSizer)
+		
+		result = loginDialog.ShowModal()
+		if self.rememberBox.IsChecked():
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("login").attrib["store"].lower() == "true":
+					config.find("login").text = self.enterUser.GetValue()
+				if config.find("pw").attrib["store"].lower() == "true":
+					config.find("pw").text = self.enterPassword.GetValue()
+			except:
+				pass
+		login = self.enterUser.GetValue()
+		pw = self.enterPassword.GetValue()
+		return login, pw
 
 
 ##############################################################################################################################

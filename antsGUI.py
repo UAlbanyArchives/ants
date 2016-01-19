@@ -101,10 +101,11 @@ class mainFrame ( wx.Frame ):
 		
 		self.rcdDescInput = wx.TextCtrl( self.fileTab, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,txtSize ), wx.TE_MULTILINE )
 		fgSizer6.Add( self.rcdDescInput, 0, wx.ALL, 5 )
+		self.rcdDescInput.SetFocus()
 		
 		bSizer91 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_staticText13 = wx.StaticText( self.fileTab, wx.ID_ANY, u"Access Concerns", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText13 = wx.StaticText( self.fileTab, wx.ID_ANY, u"Access Concerns:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText13.Wrap( -1 )
 		bSizer91.Add( self.m_staticText13, 0, wx.ALL, 5 )
 		
@@ -128,7 +129,7 @@ class mainFrame ( wx.Frame ):
 		
 		bSizer9 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.notesInput = wx.StaticText( self.fileTab, wx.ID_ANY, u"Notes for Archivist", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.notesInput = wx.StaticText( self.fileTab, wx.ID_ANY, u"Notes for Archivist:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.notesInput.Wrap( -1 )
 		bSizer9.Add( self.notesInput, 0, wx.ALL, 5 )
 		
@@ -146,15 +147,19 @@ class mainFrame ( wx.Frame ):
 		self.transferBtn = wx.Button( self.fileTab, wx.ID_ANY, u"Submit", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer12.Add( self.transferBtn, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
-		self.compressCheck = wx.CheckBox( self.fileTab, wx.ID_ANY, u"Compress files", wx.DefaultPosition, wx.DefaultSize, 0 )
-		if "compressDefault" in configData:
-			if configData["compressDefault"].lower().strip() == "false":
-				self.compressCheck.SetValue(False)
+		#check to see if compression option is locked as true
+		if configData["compressCheckList"].lower() == "true":
+			pass
+		else:
+			self.compressCheck = wx.CheckBox( self.fileTab, wx.ID_ANY, u"Compress files", wx.DefaultPosition, wx.DefaultSize, 0 )
+			if "compressDefault" in configData:
+				if configData["compressDefault"].lower().strip() == "false":
+					self.compressCheck.SetValue(False)
+				else:
+					self.compressCheck.SetValue(True) 
 			else:
 				self.compressCheck.SetValue(True) 
-		else:
-			self.compressCheck.SetValue(True) 
-		bSizer12.Add( self.compressCheck, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+			bSizer12.Add( self.compressCheck, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
 		
 		bSizer7.Add( bSizer12, 1, wx.EXPAND, 5 )
@@ -267,10 +272,14 @@ class mainFrame ( wx.Frame ):
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer33 = wx.BoxSizer( wx.HORIZONTAL )
-		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)" ]
+		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)", u"File Transfer Protocol (FTP) with TLS", u"OneDrive®" ]
 		self.m_radioBox1 = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Transfer Method", wx.DefaultPosition, wx.DefaultSize, m_radioBox1Choices, 1, wx.RA_SPECIFY_COLS )
 		if configData["transferMethod"].lower() == "ftp":
 			self.m_radioBox1.SetSelection( 1 )
+		elif configData["transferMethod"].lower() == "ftptls":
+			self.m_radioBox1.SetSelection( 2 )
+		elif configData["transferMethod"].lower() == "onedrive":
+			self.m_radioBox1.SetSelection( 3 )
 		else:
 			self.m_radioBox1.SetSelection( 0 )
 		bSizer33.Add( self.m_radioBox1, 0, wx.ALL, 5 )
@@ -306,24 +315,30 @@ class mainFrame ( wx.Frame ):
 		self.checkReceiveLocation = wx.Button( self.transferTab, wx.ID_ANY, u"Test Receive Location", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer9.Add( self.checkReceiveLocation, 0, wx.ALL, 5 )
 		
-		self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText19.Wrap( -1 )
-		fgSizer9.Add( self.m_staticText19, 0, wx.ALL, 5 )
+		if configData["loginStore"].lower() == "true":
+			self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP or OneDrive® only)", wx.DefaultPosition, wx.DefaultSize, 0 )
+			self.m_staticText19.Wrap( -1 )
+			fgSizer9.Add( self.m_staticText19, 0, wx.ALL, 5 )
+			self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 200,-1 ) )
+			fgSizer9.Add( self.loginInput, 0, wx.ALL, 5 )
+		else:
+			fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+			fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
-		self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 200,-1 ) )
-		fgSizer9.Add( self.loginInput, 0, wx.ALL, 5 )
 		
 		fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
-		self.m_staticText20 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Password (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText20.Wrap( -1 )
-		fgSizer9.Add( self.m_staticText20, 0, wx.ALL, 5 )
 		
-		self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 200,-1 ), wx.TE_PASSWORD )
-		fgSizer9.Add( self.passwordInput, 0, wx.ALL, 5 )
-		
-		
-		
+		if configData["pwStore"].lower() == "true":
+			self.m_staticText20 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Password (FTP or OneDrive® only)", wx.DefaultPosition, wx.DefaultSize, 0 )
+			self.m_staticText20.Wrap( -1 )
+			fgSizer9.Add( self.m_staticText20, 0, wx.ALL, 5 )
+			self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 200,-1 ), wx.TE_PASSWORD )
+			fgSizer9.Add( self.passwordInput, 0, wx.ALL, 5 )
+		else:
+			fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+			fgSizer9.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
+			
 		
 		bSizer3.Add( fgSizer9, 1, wx.EXPAND, 5 )
 		
@@ -347,6 +362,14 @@ class mainFrame ( wx.Frame ):
 		else:
 			self.timeZoneOption.SetSelection( 0 )
 		bSizer95.Add( self.timeZoneOption, 0, wx.ALL, 5 )
+		
+		errorChoices = [ u"Minimal", u"Verbose" ]
+		self.errorOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Error Output", wx.DefaultPosition, wx.DefaultSize, errorChoices, 1, wx.RA_SPECIFY_COLS )
+		if configData["error"].lower() == "verbose":
+			self.errorOption.SetSelection( 1 )
+		else:
+			self.errorOption.SetSelection( 0 )
+		bSizer95.Add( self.errorOption, 0, wx.ALL, 5 )
 		
 		compressOptionChoices = [ u"ZIP", u"TAR.GZIP" ]
 		self.compressOption = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Compression", wx.DefaultPosition, wx.DefaultSize, compressOptionChoices, 1, wx.RA_SPECIFY_COLS )

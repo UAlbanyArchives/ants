@@ -1,6 +1,7 @@
 import wx
 from lxml import etree as ET
 from ftplib import FTP
+from ftplib import FTP_TLS
 import os
 import traceback
 import shutil
@@ -73,8 +74,7 @@ def transferModule(self):
 						os.makedirs(locationText)
 						pathTransfer = True
 					except:
-						exceptMsg = traceback.format_exc()
-						raise ValueError("Unable to create directory. \n" + exceptMsg)
+						raise ValueError("Unable to create directory.")
 				else:
 					raise ValueError("No destination path entered, please enter a destination in the Options tab.")
 		else:
@@ -88,7 +88,14 @@ def transferModule(self):
 		totalCount = dirXML.xpath("count(//folder|//file)")
 		recordsCount = dirXML.xpath("count(//folder[@check='True']|//file[@check='True'])")
 		print "Total folders and files: " + str(recordsCount)
-		if self.compressCheck.IsChecked() is False:
+		if config.find("compress").attrib["lock"].lower() == "true":
+			compressCheckXML = True
+		else:
+			if self.compressCheck.IsChecked():
+				compressCheckXML = True
+			else:
+				compressCheckXML = False
+		if compressCheckXML is False:
 			progressGoal = recordsCount + recordsCount + 11
 		else:
 			progressGoal = recordsCount + 7
@@ -103,7 +110,7 @@ def transferModule(self):
 		self.progressCount = 0
 		self.progressMsgRoot = "Packaging your records and transferring them to the archives.\n"
 		self.progressMsg = self.progressMsgRoot
-		self.progressBar = wx.ProgressDialog("ANTS: Archives Network Transfer System", self.progressMsg, maximum=progressGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
+		self.progressBar = wx.ProgressDialog("Transferring Your Records...", self.progressMsg, maximum=progressGoal, parent=self, style=wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
 		self.progressBar.ShowModal()
 		
 			
@@ -151,8 +158,7 @@ def transferModule(self):
 			dirXML = recordEvents(self, dirXML)
 			self.progressCount = self.progressCount + 1
 		except:
-			exceptMsg = traceback.format_exc()
-			raise ValueError("Failed to run forensics tools: \n" + exceptMsg)
+			raise ValueError("Failed to run forensics tools.")
 		
 		#move files to new directory
 		try:
@@ -167,18 +173,16 @@ def transferModule(self):
 					try:
 						shutil.rmtree(os.path.join(self.appData, "staging", accessionNumber))
 					except:
-						exceptMsg = traceback.format_exc()
-						raise ValueError("Unable overwrite previous partial transfer. \n" + exceptMsg + "\n Try changing the Accession Count in config.xml.")
+						raise ValueError("Unable overwrite previous partial transfer. Try changing the Accession Count in config.xml.")
 				else:
 					raise ValueError("Unable to transfer files. Try changing the Accession Count in config.xml.")
 			os.makedirs(os.path.join(self.appData, "staging", accessionNumber))
 			bagDir = os.path.join(self.appData, "staging", accessionNumber)
 			countCopyXML(self.sourceDir, bagDir, dirXML)
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
-			raise ValueError("Failed to move files to new directory: \n" + exceptMsg)
+			raise ValueError("Failed to move files to new directory.")
 		
 		#bag directory
 		try:
@@ -204,7 +208,7 @@ def transferModule(self):
 						eventBagit.set("timestamp", self.timestampOutput(eventTime))
 						eventBagit.text = "ran Bagit-python to package accession"
 						item.find("curatorialEvents").append(eventBagit)
-						if self.compressCheck.IsChecked() is True:
+						if compressCheckXML is True:
 							if self.compressOption.GetSelection() == 0:
 								eventCompress = ET.Element("event")
 								eventTime = str(calendar.timegm(time.gmtime()))
@@ -226,10 +230,9 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
-			raise ValueError("Failed to bag files: \n" + exceptMsg)
+			raise ValueError("Failed to bag files.")
 		
 		
 		#write to receipt
@@ -272,10 +275,9 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
-			raise ValueError("Failed to write receipt: \n" + exceptMsg)
+			raise ValueError("Failed to write receipt.")
 		
 		
 		#remove unwanted files from XML
@@ -299,10 +301,9 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
-				raise ValueError("Failed to remove unwanted files from XML: \n" + exceptMsg)
+				raise ValueError("Failed to remove unwanted files from XML.")
 			
 		
 		#write XML to file and update bag manifests
@@ -323,14 +324,13 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
-				raise ValueError("Failed to write XML to file and update bag manifests: \n" + exceptMsg)
+				raise ValueError("Failed to write XML to file and update bag manifests.")
 		
 		#compress bag?
 		try:
-			if self.compressCheck.IsChecked() is True:
+			if compressCheckXML is True:
 				self.progressMsg = self.progressMsgRoot + "Compressing data..."
 				self.progressBar.Update(self.progressCount, self.progressMsg)
 				if self.get_size(bagDir) >= 2000000000:
@@ -349,14 +349,13 @@ def transferModule(self):
 				finalPackage = bagDir
 			return finalPackage, locationText, accessionNumber, receiptRoot, progressGoal
 		except:
-			exceptMsg = traceback.format_exc()
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir)
 			if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".zip")):
 				os.remove(os.path.join(self.sourceDir, accessionNumber,".zip"))
 			if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".tar.gz")):
 				os.remove(os.path.join(self.sourceDir, accessionNumber,".tar.gz"))
-			raise ValueError("Failed to compress bag: \n" + exceptMsg)
+			raise ValueError("Failed to compress bag.")
 		
 	#############################################################################################################################
 	
@@ -407,13 +406,16 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			exceptMsg = traceback.format_exc()
-			raise ValueError("Failed to transfer bag to destination over Network: \n" + exceptMsg)
+			raise ValueError("Failed to transfer bag to destination over Network.")
 		
 		
 	##############################################################################################################################################
 	
-	def moveFTP(finalPackage, locationText):
+	#def moveOneDrive(finalPackage, locationText):
+	
+	##############################################################################################################################################
+	
+	def moveFTP(self, finalPackage, locationText):
 	
 		def countFTP(ftp, source):
 			for item in os.listdir(source):
@@ -455,15 +457,39 @@ def transferModule(self):
 			if locationText.lower().startswith("ftp://"):
 					locationText = locationText[6:]
 			
+			#get credentials
+			try:
+				login = self.loginInput.GetValue()
+			except:
+				login = ""
+			try:
+				pw = self.passwordInput.GetValue()
+			except:
+				pw = ""
+			if len(login) < 1 or len(pw) < 1:
+				login, pw = self.loginBox(login, pw)
+			
 			#FTP login
 			ftpURL = locationText.split("/")
-			ftp = FTP(ftpURL[0])
-			login = self.loginInput.GetValue()
-			pw = self.passwordInput.GetValue()
-			try:
-				ftp.login(login, pw)
-			except:
-				raise ValueError("Incorrect Login or Password.")
+			if self.m_radioBox1.GetSelection() == 2:
+				#FPT with TLS
+				ftp = FTP_TLS(ftpURL[0])
+				try:
+					ftp.login(login, pw)
+				except:
+					raise ValueError("Incorrect Login or Password, or incorrect encryption settings in FTP server.")
+				try:
+					ftp.prot_p() 
+				except:
+					raise ValueError("Error setting up encryption.")
+			else:
+				#unencrypted FTP
+				ftp = FTP(ftpURL[0])
+				try:
+					ftp.login(login, pw)
+				except:
+					raise ValueError("Incorrect Login or Password.")
+
 			
 			#FTP navigate to subdirectories
 			ftpURL.pop(0)
@@ -499,9 +525,8 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)		
 		except:
-			exceptMsg = traceback.format_exc()
 			ftp.quit()
-			raise ValueError("Failed to transfer bag to destination over FTP: \n" + exceptMsg)
+			raise ValueError("Failed to transfer bag to destination over FTP.")
 		
 	
 	##############################################################################################################################################
@@ -514,21 +539,58 @@ def transferModule(self):
 	
 	#package files in staging area in AppData and make transfer
 	try:
-		if self.m_radioBox1.GetSelection() == 1:
-			methodText = "ftp"
-			dirXML.find("profile/method").text = methodText
-			
-			pathTransfer = False
-			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
-			moveFTP(finalPackage, locationText)
-			
-		else:
+		if self.m_radioBox1.GetSelection() == 0:
+			#transfer local or network storage
 			methodText = "network"
 			dirXML.find("profile/method").text = methodText
 			pathTransfer = True
 			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
 			moveNetwork(finalPackage, locationText, accessionNumber)
-	except:
+			
+		elif self.m_radioBox1.GetSelection() == 3:
+			#transfer OneDrive
+			pass
+			#methodText = "onedrive"
+			#dirXML.find("profile/method").text = methodText
+			#pathTransfer = True
+			#finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			#moveOneDrive(finalPackage, locationText, accessionNumber)
+			
+		else:
+			#Tranfer FTP
+			methodText = "ftp"
+			dirXML.find("profile/method").text = methodText
+			
+			pathTransfer = False
+			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			moveFTP(self, finalPackage, locationText)
+			
+		#write receipt to file
+		try:
+			receiptString = ET.tostring(receiptRoot, pretty_print=True)	
+			file = open(os.path.join(self.appData, "receipt.xml"), "w")
+			file.write(receiptString)
+			file.close()
+			os.remove(os.path.join(self.appData, "~directory.xml"))
+			self.progressCount = self.progressCount + 1
+			if self.progressCount == progressGoal:
+				self.progressBar.Destroy()
+			else:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+		except:
+			raise ValueError("Failed to write to receipt to file")
+			
+		if self.progressCount >= progressGoal:
+			print "progressGoal reached " + str(self.progressCount)
+			self.Close()
+		else:
+			print "didn't reach processGoal, reached " +str(self.progressCount)
+			self.Close()
+			
+		successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transferred in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+		successNotice.ShowModal()
+	
+	except (Exception, ValueError) as e:
 		#error Dialog that doesn't close ANTS
 		exceptMsg = traceback.format_exc()
 		print exceptMsg
@@ -537,7 +599,16 @@ def transferModule(self):
 		file.write(errorOutput)
 		file.close()
 		self.progressBar.Destroy()
-		errorPopup = wx.MessageDialog(None, "Transfer Error" + "\n\n" + str(exceptMsg), "ERROR", wx.OK | wx.ICON_ERROR)
+		try:
+			configXML = os.path.join(self.appData, "config.xml")
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			if config.find("error").text == "minimal":
+				exceptMsg = e
+		except:
+			pass
+		errorPopup = wx.MessageDialog(None, str(exceptMsg), "Transfer Error", wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 		errorPopup.ShowModal()
 		#ask to save archival package locally
 		askSaveLocal = wx.MessageDialog(None, "There was an error transfering files to the archives. ANTS does not modify your original files, so they reminan unchanged in their original location and you can retry the transfer at any time. Would you like to save the archival package that ANTS failed to transfer?", "Save Archival Package?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_ERROR | wx.STAY_ON_TOP)
@@ -545,47 +616,18 @@ def transferModule(self):
 			saveLocal = wx.DirDialog(None, "Select a location to save the archival package:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
 			if saveLocal.ShowModal() == wx.ID_OK:
 				localLocation =  saveLocal.GetPath()
-				if os.path.isdir(finalPackage):
-					shutil.copytree(finalPackage, os.path.join(localLocation, os.path.basename(finalPackage)))
-					shutil.rmtree(finalPackage)
-				elif os.path.isfile(finalPackage):
-					shutil.copy2(finalPackage, localLocation)
-					os.remove(finalPackage)
-				else:
-					try:
-						if os.path.isdir(finalPackage):
-							shutil.rmtree(finalPackage)
-						elif os.path.isfile(finalPackage):
-							os.remove(finalPackage)
-					except:
-						pass
+				try:
+					if os.path.isdir(finalPackage):
+						shutil.copytree(finalPackage, os.path.join(localLocation, os.path.basename(finalPackage)))
+						shutil.rmtree(finalPackage)
+					elif os.path.isfile(finalPackage):
+						shutil.copy2(finalPackage, localLocation)
+						os.remove(finalPackage)
+				except:
 					raise ValueError("Failed to save archival package locally.")
-		raise ValueError("Failed to transfer, saved archival package locally. Your files also remain in their original location and you may retry the transfer at any time.")
-	
-	#write receipt to file
-	try:
-		receiptString = ET.tostring(receiptRoot, pretty_print=True)	
-		file = open(os.path.join(self.appData, "receipt.xml"), "w")
-		file.write(receiptString)
-		file.close()
-		os.remove(os.path.join(self.appData, "~directory.xml"))
-		self.progressCount = self.progressCount + 1
-		if self.progressCount == progressGoal:
-			self.progressBar.Destroy()
-		else:
-			self.progressBar.Update(self.progressCount, self.progressMsg)
-	except:
-		exceptMsg = traceback.format_exc()
-		raise ValueError("Failed to write to receipt to file: \n" + exceptMsg)
-	
-	
-		
-	if self.progressCount >= progressGoal:
-		print "progressGoal reached " + str(self.progressCount)
-		self.Close()
-	else:
-		print "didn't reach processGoal, reached " +str(self.progressCount)
-		self.Close()
-		
-	successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transfered in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
-	successNotice.ShowModal()
+		if os.path.isdir(finalPackage):
+			shutil.rmtree(finalPackage)
+		elif os.path.isfile(finalPackage):
+			os.remove(finalPackage)
+		noChange = wx.MessageDialog(None, "Failed to transfer. Your files also remain in their original location and you may retry the transfer at any time.", "Files Remain Unchanged.", wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+		noChange.ShowModal()
