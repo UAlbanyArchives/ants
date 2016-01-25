@@ -11,6 +11,8 @@ ANTS is offered as an open beta for external testing. Development is ongoing, bu
 
 ANTS is available publicly primarily as a proof of concept and a tool for experimentation. While we hope to implement ANTS at the University at Albany, SUNY, any external users should plan to require their own development and support.
 
+Comments and/or feature requests are welcome.
+
 ##Features
 
 * Developed for records creators to describe, package, and transfer unstructured files to a university archives.
