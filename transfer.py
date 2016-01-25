@@ -96,9 +96,9 @@ def transferModule(self):
 			else:
 				compressCheckXML = False
 		if compressCheckXML is False:
-			progressGoal = recordsCount + recordsCount + 11
+			progressGoal = recordsCount + recordsCount + 12
 		else:
-			progressGoal = recordsCount + 7
+			progressGoal = recordsCount + 8
 		if self.adminTest == True:
 			progressGoal = progressGoal + totalCount
 		else:
@@ -116,6 +116,9 @@ def transferModule(self):
 			
 		#moves directory for each selection in XML while updating progress dialog for every file and folder
 		def countCopyXML(source, destination, dirXML):
+			destDir = os.path.join(destination, os.path.basename(source))
+			os.makedirs(destDir)
+			shutil.copystat(source, destDir)
 			for item in os.listdir(source):
 				path = os.path.join(source, item)
 				if path != destination:
@@ -136,15 +139,15 @@ def transferModule(self):
 						if os.path.isdir(path):
 							self.progressMsg = self.progressMsgRoot + "Gathering " + item
 							self.progressBar.Update(self.progressCount, self.progressMsg)
-							os.makedirs(os.path.join(destination, item))
-							shutil.copystat(path, os.path.join(destination, item))
+							os.makedirs(os.path.join(destDir, item))
+							shutil.copystat(path, os.path.join(destDir, item))
 							self.progressCount = self.progressCount + 1
 							self.progressBar.Update(self.progressCount, self.progressMsg)
-							countCopyXML(path, os.path.join(destination, item), dirXML)
+							countCopyXML(path, os.path.join(destDir, item), dirXML)
 						elif os.path.isfile(path):
 							self.progressMsg = self.progressMsgRoot + "Gathering " + item
 							self.progressBar.Update(self.progressCount, self.progressMsg)
-							shutil.copy2(path, destination)
+							shutil.copy2(path, destDir)
 							self.progressCount = self.progressCount + 1
 							self.progressBar.Update(self.progressCount, self.progressMsg)
 						else:
@@ -158,7 +161,17 @@ def transferModule(self):
 			dirXML = recordEvents(self, dirXML)
 			self.progressCount = self.progressCount + 1
 		except:
-			raise ValueError("Failed to run forensics tools.")
+			exceptMsg = "Failed to run forensics tools"
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("error").text == "verbose":
+					exceptMsg = exceptMsg + ": " + traceback.format_exc()
+			except:
+				pass
+			raise ValueError(exceptMsg)
 		
 		#move files to new directory
 		try:
@@ -171,7 +184,7 @@ def transferModule(self):
 				countError = wx.MessageDialog(None, "Previous Accession found in staging area " + os.path.join(self.appData, "staging", accessionNumber) +"\n Do you want to overwrite this data?", "Packaging Error", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_WARNING | wx.STAY_ON_TOP)
 				if countError.ShowModal() == wx.ID_YES:
 					try:
-						shutil.rmtree(os.path.join(self.appData, "staging", accessionNumber))
+						shutil.rmtree(os.path.join(self.appData, "staging", accessionNumber), ignore_errors=False, onerror=self.handleRemoveReadonly)
 					except:
 						raise ValueError("Unable overwrite previous partial transfer. Try changing the Accession Count in config.xml.")
 				else:
@@ -181,8 +194,17 @@ def transferModule(self):
 			countCopyXML(self.sourceDir, bagDir, dirXML)
 		except:
 			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
+				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 			raise ValueError("Failed to move files to new directory.")
+		
+		#make sure directory is not read-only
+		try:
+			if not os.access(bagDir, os.W_OK):
+				print test
+				os.chmod(bagDir, stat.S_IWUSR)
+		except:
+			raise ValueError("Failed to remove read-only permissions from directory in staging area.")
+		
 		
 		#bag directory
 		try:
@@ -231,7 +253,7 @@ def transferModule(self):
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
 			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
+				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 			raise ValueError("Failed to bag files.")
 		
 		
@@ -276,7 +298,7 @@ def transferModule(self):
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
 			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
+				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 			raise ValueError("Failed to write receipt.")
 		
 		
@@ -302,7 +324,7 @@ def transferModule(self):
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
 			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
+				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 				raise ValueError("Failed to remove unwanted files from XML.")
 			
 		
@@ -325,7 +347,7 @@ def transferModule(self):
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
 			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
+				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 				raise ValueError("Failed to write XML to file and update bag manifests.")
 		
 		#compress bag?
@@ -342,20 +364,34 @@ def transferModule(self):
 						finalPackage = shutil.make_archive(bagDir, 'gztar', bagDir)
 					else:
 						raise ValueError("Unable to read compression selection.")
-					shutil.rmtree(bagDir)
+					shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 					self.progressCount = self.progressCount + 1
 					self.progressBar.Update(self.progressCount, self.progressMsg)
 			else:
 				finalPackage = bagDir
 			return finalPackage, locationText, accessionNumber, receiptRoot, progressGoal
 		except:
-			if os.path.isdir(bagDir):
-				shutil.rmtree(bagDir)
-			if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".zip")):
-				os.remove(os.path.join(self.sourceDir, accessionNumber,".zip"))
-			if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".tar.gz")):
-				os.remove(os.path.join(self.sourceDir, accessionNumber,".tar.gz"))
-			raise ValueError("Failed to compress bag.")
+			exception = traceback.format_exc()
+			try:
+				if os.path.isdir(bagDir):
+					shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
+				if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".zip")):
+					os.remove(os.path.join(self.sourceDir, accessionNumber,".zip"))
+				if os.path.isfile(os.path.join(self.sourceDir, accessionNumber,".tar.gz")):
+					os.remove(os.path.join(self.sourceDir, accessionNumber,".tar.gz"))
+			except:
+				pass
+			exceptMsg = "Failed to compress bag"
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("error").text == "verbose":
+					exceptMsg = exceptMsg + ": " + exception
+			except:
+				pass
+			raise ValueError(exceptMsg)
 		
 	#############################################################################################################################
 	
@@ -397,7 +433,7 @@ def transferModule(self):
 				destination = os.path.join(locationText, os.path.basename(finalPackage))
 				countCopy(finalPackage, destination)
 				if os.path.isdir(finalPackage):
-					shutil.rmtree(finalPackage)
+					shutil.rmtree(finalPackage, ignore_errors=False, onerror=self.handleRemoveReadonly)
 			elif os.path.isfile(finalPackage):
 				shutil.copy2(finalPackage, locationText)
 				os.remove(finalPackage)
@@ -406,7 +442,17 @@ def transferModule(self):
 			self.progressCount = self.progressCount + 1
 			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
-			raise ValueError("Failed to transfer bag to destination over Network.")
+			exceptMsg = "Failed to transfer bag to destination over Network"
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("error").text == "verbose":
+					exceptMsg = exceptMsg + ": " + traceback.format_exc()
+			except:
+				pass
+			raise ValueError(exceptMsg)
 		
 		
 	##############################################################################################################################################
@@ -506,7 +552,7 @@ def transferModule(self):
 					ftp.cwd(shortuuid.uuid() + os.path.basename(finalPackage))
 				countFTP(ftp, finalPackage)
 				if os.path.isdir(finalPackage):
-					shutil.rmtree(finalPackage)
+					shutil.rmtree(finalPackage, ignore_errors=False, onerror=self.handleRemoveReadonly)
 			elif os.path.isfile(finalPackage):
 				#Upload compressed file
 				fileList = []
@@ -539,12 +585,14 @@ def transferModule(self):
 	
 	#package files in staging area in AppData and make transfer
 	try:
+		packageTest = False
 		if self.m_radioBox1.GetSelection() == 0:
 			#transfer local or network storage
 			methodText = "network"
 			dirXML.find("profile/method").text = methodText
 			pathTransfer = True
 			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			packageTest = True
 			moveNetwork(finalPackage, locationText, accessionNumber)
 			
 		elif self.m_radioBox1.GetSelection() == 3:
@@ -554,6 +602,7 @@ def transferModule(self):
 			#dirXML.find("profile/method").text = methodText
 			#pathTransfer = True
 			#finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			#packageTest = True
 			#moveOneDrive(finalPackage, locationText, accessionNumber)
 			
 		else:
@@ -563,6 +612,7 @@ def transferModule(self):
 			
 			pathTransfer = False
 			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			packageTest = True
 			moveFTP(self, finalPackage, locationText)
 			
 		#write receipt to file
@@ -578,6 +628,8 @@ def transferModule(self):
 			else:
 				self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
+			exceptMsg = traceback.format_exc()
+			print exceptMsg
 			raise ValueError("Failed to write to receipt to file")
 			
 		if self.progressCount >= progressGoal:
@@ -610,24 +662,33 @@ def transferModule(self):
 			pass
 		errorPopup = wx.MessageDialog(None, str(exceptMsg), "Transfer Error", wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 		errorPopup.ShowModal()
-		#ask to save archival package locally
-		askSaveLocal = wx.MessageDialog(None, "There was an error transfering files to the archives. ANTS does not modify your original files, so they reminan unchanged in their original location and you can retry the transfer at any time. Would you like to save the archival package that ANTS failed to transfer?", "Save Archival Package?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_ERROR | wx.STAY_ON_TOP)
-		if askSaveLocal.ShowModal() == wx.ID_YES:
-			saveLocal = wx.DirDialog(None, "Select a location to save the archival package:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-			if saveLocal.ShowModal() == wx.ID_OK:
-				localLocation =  saveLocal.GetPath()
-				try:
-					if os.path.isdir(finalPackage):
-						shutil.copytree(finalPackage, os.path.join(localLocation, os.path.basename(finalPackage)))
-						shutil.rmtree(finalPackage)
-					elif os.path.isfile(finalPackage):
-						shutil.copy2(finalPackage, localLocation)
-						os.remove(finalPackage)
-				except:
-					raise ValueError("Failed to save archival package locally.")
-		if os.path.isdir(finalPackage):
-			shutil.rmtree(finalPackage)
-		elif os.path.isfile(finalPackage):
-			os.remove(finalPackage)
+		
+		#ask to save archival package locally if packaging was completed
+		if packageTest == True:
+			askSaveLocal = wx.MessageDialog(None, "There was an error transfering files to the archives. ANTS does not modify your original files, so they reminan unchanged in their original location and you can retry the transfer at any time. Would you like to save the archival package that ANTS failed to transfer?", "Save Archival Package?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_ERROR | wx.STAY_ON_TOP)
+			if askSaveLocal.ShowModal() == wx.ID_YES:
+				saveLocal = wx.DirDialog(None, "Select a location to save the archival package:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+				if saveLocal.ShowModal() == wx.ID_OK:
+					localLocation =  saveLocal.GetPath()
+					try:
+						if os.path.isdir(finalPackage):
+							shutil.copytree(finalPackage, os.path.join(localLocation, os.path.basename(finalPackage)))
+							shutil.rmtree(finalPackage, ignore_errors=False, onerror=self.handleRemoveReadonly)
+						elif os.path.isfile(finalPackage):
+							shutil.copy2(finalPackage, localLocation)
+							os.remove(finalPackage)
+					except:
+						raise ValueError("Failed to save archival package locally.")
+		
+		#remove files in staging area
+		try:
+			if os.path.isdir(finalPackage):
+				shutil.rmtree(finalPackage, ignore_errors=False, onerror=self.handleRemoveReadonly)
+			elif os.path.isfile(finalPackage):
+				os.remove(finalPackage)
+		except:
+			pass
+			
+		#final error dialog
 		noChange = wx.MessageDialog(None, "Failed to transfer. Your files also remain in their original location and you may retry the transfer at any time.", "Files Remain Unchanged.", wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
 		noChange.ShowModal()

@@ -12,6 +12,8 @@ import time
 import datetime
 import subprocess
 import admin
+import stat
+import errno
 from transfer import transferModule
 from ftplib import FTP
 from ftplib import FTP_TLS
@@ -80,8 +82,13 @@ class ANTSFrame(gui.mainFrame):
 			configParse = ET.parse(configXML, parser)
 			config = configParse.getroot()
 			if len(self.readXML(config, "pw")) > 0:
-				pwd = binascii.unhexlify(self.readXML(config, "pw"))
-				getPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+				try:
+					pwd = binascii.unhexlify(self.readXML(config, "pw"))
+					getPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+				except:
+					exceptMsg = traceback.format_exc()
+					self.errorMessage("Error reading password from configuration data. Password must be encrypted and cannot be read from config.xml. An empty password will be substituted.", exceptMsg)
+					getPw = ""
 			else:
 				getPw = ""
 			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), \
@@ -161,6 +168,7 @@ class ANTSFrame(gui.mainFrame):
 							descXML = ET.SubElement(itemXML, "description")
 							accessXML = ET.SubElement(itemXML, "access")
 							curatorialEvent = ET.SubElement(itemXML, "curatorialEvents")
+							curatorialEvent.set("version", antsVersion)
 							dir2XML(os.path.join(path, item), itemXML)
 						elif os.path.isfile(itempath):
 							itemXML = ET.SubElement(root, "file")
@@ -173,6 +181,7 @@ class ANTSFrame(gui.mainFrame):
 							descXML = ET.SubElement(itemXML, "description")
 							accessXML = ET.SubElement(itemXML, "access")
 							curatorialEvent = ET.SubElement(itemXML, "curatorialEvents")
+							curatorialEvent.set("version", antsVersion)
 				dir2XML(self.sourceDir, folderXML)
 				dirXMLString = ET.tostring(rootXML, pretty_print=True)
 				file = open(os.path.join(self.appData, "~directory.xml"), "w")
@@ -605,11 +614,16 @@ class ANTSFrame(gui.mainFrame):
 					except:
 						pass
 				if config.find("pw").attrib["store"].lower() == "true":
-					config.find("pw").text = self.enterPassword.GetValue()
+					pwd = win32crypt.CryptProtectData(self.enterPassword.GetValue())
+					config.find('pw').text = binascii.hexlify(pwd)
 					try:
 						self.passwordInput.SetLabel(self.enterPassword.GetValue())
 					except:
 						pass
+				configString = ET.tostring(config, pretty_print=True)
+				file = open(os.path.join(self.appData, "config.xml"), "w")
+				file.write(configString)
+				file.close()
 			except:
 				pass
 		login = self.enterUser.GetValue()
@@ -773,7 +787,7 @@ class ANTSFrame(gui.mainFrame):
 			defaultFile = os.path.join(self.appData, "receipt.xml")
 		else:
 			from html import htmlReceipt
-			htmlString = htmlReceipt(os.path.join(self.appData, "receipt.xml"), str(datetime.datetime.now()), os.path.join(self.appData, "config.xml"))
+			htmlString = htmlReceipt(self, os.path.join(self.appData, "receipt.xml"), str(datetime.datetime.now()), os.path.join(self.appData, "config.xml"))
 			htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
 			htmlFile.write(htmlString)
 			htmlFile.close()
@@ -806,6 +820,17 @@ class ANTSFrame(gui.mainFrame):
 				fp = os.path.join(dirpath, f)
 				total_size += os.path.getsize(fp)
 		return total_size
+		
+	
+	#handles windows read-only directories
+	#http://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+	def handleRemoveReadonly(self, func, path, exc):
+		excvalue = exc[1]
+		if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
+			os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+			func(path)
+		else:
+			raise
 		
  
 #mandatory in wx, create an app, False stands for not deteriction stdin/stdout

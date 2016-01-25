@@ -272,7 +272,7 @@ class mainFrame ( wx.Frame ):
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer33 = wx.BoxSizer( wx.HORIZONTAL )
-		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)", u"File Transfer Protocol (FTP) with TLS", u"OneDrive®" ]
+		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)", u"File Transfer Protocol (FTP) with TLS"]#, u"OneDrive®" ]
 		self.m_radioBox1 = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Transfer Method", wx.DefaultPosition, wx.DefaultSize, m_radioBox1Choices, 1, wx.RA_SPECIFY_COLS )
 		if configData["transferMethod"].lower() == "ftp":
 			self.m_radioBox1.SetSelection( 1 )
@@ -316,7 +316,7 @@ class mainFrame ( wx.Frame ):
 		fgSizer9.Add( self.checkReceiveLocation, 0, wx.ALL, 5 )
 		
 		if configData["loginStore"].lower() == "true":
-			self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP or OneDrive® only)", wx.DefaultPosition, wx.DefaultSize, 0 )
+			self.m_staticText19 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Login (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 ) # or OneDrive®
 			self.m_staticText19.Wrap( -1 )
 			fgSizer9.Add( self.m_staticText19, 0, wx.ALL, 5 )
 			self.loginInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["login"], wx.DefaultPosition, wx.Size( 200,-1 ) )
@@ -330,7 +330,7 @@ class mainFrame ( wx.Frame ):
 		
 		
 		if configData["pwStore"].lower() == "true":
-			self.m_staticText20 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Password (FTP or OneDrive® only)", wx.DefaultPosition, wx.DefaultSize, 0 )
+			self.m_staticText20 = wx.StaticText( self.transferTab, wx.ID_ANY, u"Password (FTP only)", wx.DefaultPosition, wx.DefaultSize, 0 ) # or OneDrive®
 			self.m_staticText20.Wrap( -1 )
 			fgSizer9.Add( self.m_staticText20, 0, wx.ALL, 5 )
 			self.passwordInput = wx.TextCtrl( self.transferTab, wx.ID_ANY, configData["password"], wx.DefaultPosition, wx.Size( 200,-1 ), wx.TE_PASSWORD )

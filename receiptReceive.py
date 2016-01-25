@@ -66,7 +66,7 @@ def produceReceipt(self, xmlSource):
 			subprocess.Popen(os.path.join(tempDir, os.path.join(self.appData, "receipt.xml")), shell=True)
 		else:
 			from html import htmlReceipt
-			htmlString = htmlReceipt(os.path.join(self.appData, "receipt.xml"), str(datetime.datetime.now()), os.path.join(self.appData, "config.xml"))
+			htmlString = htmlReceipt(self, os.path.join(self.appData, "receipt.xml"), str(datetime.datetime.now()), os.path.join(self.appData, "config.xml"))
 			htmlFile = open(os.path.join(tempDir, "receipt.html"), "w")
 			htmlFile.write(htmlString)
 			htmlFile.close()
@@ -77,10 +77,11 @@ def produceReceipt(self, xmlSource):
 
 
 def checkReceiveFiles(self, xmlSource):
-
+	
 	try:	
 		#get the information needed from config.xml for the splash screen or the GUI from the options tab
 		if xmlSource == True:
+			#means call was made from welcome screen before GUI, get transfer info directly from config.xml
 			try:
 				configXML = os.path.join(self.appData, "config.xml")
 				parser = ET.XMLParser(remove_blank_text=True)
@@ -93,12 +94,25 @@ def checkReceiveFiles(self, xmlSource):
 			transferMethod = config.find("transferMethod").text
 			receiveLocation = config.find("receiveLocation").text
 			if transferMethod != "network":
-				if config.find("login").text is None or config.find("pw").text is None:
-					raise ValueError("Failed to receive files, both the login and password must be entered in the GUI and set as default.")
-				login = config.find("login").text
-				getPw = binascii.unhexlify(config.find("pw").text)
-				pw = win32crypt.CryptUnprotectData(getPw)[1].replace("\x00", "").encode('ascii', 'replace')
+				#get credentials, try XML first, then run loginBox function from ants.py
+				try:
+					login = config.find("login").text
+					if login is None:
+						login = ""
+				except:
+					login = ""
+				try:
+					getPw = binascii.unhexlify(config.find("pw").text)
+					pw = win32crypt.CryptUnprotectData(getPw)[1].replace("\x00", "").encode('ascii', 'replace')
+					if pw is None:
+						pw = ""
+				except:
+					pw = ""
+				
+			
 		else:
+			#means call was made from GUI, get transfer info from GUI
+			#get credentials, try GUI first, then run loginBox function from antsFromBoot.py
 			try:
 				login = self.loginInput.GetValue()
 			except:
@@ -237,49 +251,52 @@ def checkReceiveFiles(self, xmlSource):
 			fileList = []
 			fileList = readFTP(ftp, fileList, baseDir)
 			
-			
-			selectFiles = wx.MultiChoiceDialog( self, "Select Files to Download", "Download Records from the University Archives", fileList)
-			overwriteSwitch = False
-			overwriteAsk = False
-			if selectFiles.ShowModal() == wx.ID_OK:
-				selections = selectFiles.GetSelections()
-				if len(selections) > 0:
-					strings = [fileList[x] for x in selections]
-					saveRequest = wx.DirDialog(None, "Select a folder to save your requested files:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-					if saveRequest.ShowModal() == wx.ID_OK:
-						saveLocation =  saveRequest.GetPath()
-						saveGoal = len(strings)
-						saveCount= 0
-						saveProgress = wx.ProgressDialog("Downloading Requested Files", "Downloading files...",  maximum=saveGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE)
-						for requestedFile in strings:
-							saveMsg = "Downloading " + requestedFile + "..."
-							saveProgress.Update(saveCount, saveMsg)
-							localFile = os.path.join(*requestedFile.split("/"))
-							if len(os.path.split(localFile)) > 1:
-								if not os.path.exists(os.path.join(saveLocation, os.path.dirname(localFile))):
-									os.makedirs(os.path.join(saveLocation, os.path.dirname(localFile)))
-							if os.path.isfile(os.path.join(saveLocation, localFile)):
-								if overwriteAsk == False:
-									askOverwrite = wx.MessageDialog(None, "Some of the files you requested were already found. Would you like to overwrite them?", "Overwrite Existing Files?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_WARNING)
-									overwriteAsk = True
-									if askOverwrite.ShowModal() == wx.ID_YES:
-										overwriteSwitch = True
-								if overwriteSwitch == True:
-									lf = open(os.path.join(saveLocation, localFile), "wb")
-									ftp.retrbinary("RETR " + baseDir + "/" + requestedFile, lf.write, 8*1024)
-									lf.close()
-							lf = open(os.path.join(saveLocation, localFile), "wb")
-							ftp.retrbinary("RETR " + baseDir + "/" + requestedFile, lf.write, 8*1024)
-							lf.close()
-							saveCount = saveCount + 1
-							if saveCount >= saveGoal:
-								saveProgress.Destroy()
-								successNotice = wx.MessageDialog(None, 'The files you requested were downloaded successfully.', 'Request was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
-								successNotice.ShowModal()
-							else:
+			if len(fileList) > 0:
+				selectFiles = wx.MultiChoiceDialog( self, "Select Files to Download", "Download Records from the University Archives", fileList)
+				overwriteSwitch = False
+				overwriteAsk = False
+				if selectFiles.ShowModal() == wx.ID_OK:
+					selections = selectFiles.GetSelections()
+					if len(selections) > 0:
+						strings = [fileList[x] for x in selections]
+						saveRequest = wx.DirDialog(None, "Select a folder to save your requested files:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+						if saveRequest.ShowModal() == wx.ID_OK:
+							saveLocation =  saveRequest.GetPath()
+							saveGoal = len(strings)
+							saveCount= 0
+							saveProgress = wx.ProgressDialog("Downloading Requested Files", "Downloading files...",  maximum=saveGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE)
+							for requestedFile in strings:
+								saveMsg = "Downloading " + requestedFile + "..."
 								saveProgress.Update(saveCount, saveMsg)
-					saveRequest.Destroy()
-			selectFiles.Destroy()
+								localFile = os.path.join(*requestedFile.split("/"))
+								if len(os.path.split(localFile)) > 1:
+									if not os.path.exists(os.path.join(saveLocation, os.path.dirname(localFile))):
+										os.makedirs(os.path.join(saveLocation, os.path.dirname(localFile)))
+								if os.path.isfile(os.path.join(saveLocation, localFile)):
+									if overwriteAsk == False:
+										askOverwrite = wx.MessageDialog(None, "Some of the files you requested were already found. Would you like to overwrite them?", "Overwrite Existing Files?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_WARNING)
+										overwriteAsk = True
+										if askOverwrite.ShowModal() == wx.ID_YES:
+											overwriteSwitch = True
+									if overwriteSwitch == True:
+										lf = open(os.path.join(saveLocation, localFile), "wb")
+										ftp.retrbinary("RETR " + baseDir + "/" + requestedFile, lf.write, 8*1024)
+										lf.close()
+								lf = open(os.path.join(saveLocation, localFile), "wb")
+								ftp.retrbinary("RETR " + baseDir + "/" + requestedFile, lf.write, 8*1024)
+								lf.close()
+								saveCount = saveCount + 1
+								if saveCount >= saveGoal:
+									saveProgress.Destroy()
+									successNotice = wx.MessageDialog(None, 'The files you requested were downloaded successfully.', 'Request was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+									successNotice.ShowModal()
+								else:
+									saveProgress.Update(saveCount, saveMsg)
+						saveRequest.Destroy()
+				selectFiles.Destroy()
+			else:
+				noFiles = wx.MessageDialog(None, 'Connection was successful, but there are no files in your Recieve Location available to download. Please contact your archivist for more details.', 'No Files Available', wx.OK | wx.ICON_WARNING | wx.STAY_ON_TOP)
+				noFiles.ShowModal()
 
 			ftp.quit()
 		
@@ -296,9 +313,11 @@ def checkReceiveFiles(self, xmlSource):
 			parser = ET.XMLParser(remove_blank_text=True)
 			configParse = ET.parse(configXML, parser)
 			config = configParse.getroot()
-			if config.find("error").text == "minimal":
+			if config.find("error").text == "verbose":
+				pass
+			else:
 				exceptMsg = e
 		except:
-			pass
+			exceptMsg = e
 		errorPopup = wx.MessageDialog(None, "Failed to Receive Files" + "\n\n" + str(exceptMsg), "Failed to Receive Files", wx.OK | wx.ICON_ERROR)
 		errorPopup.ShowModal()

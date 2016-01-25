@@ -77,7 +77,7 @@ If you set up ANTS with the installer and selected the appropriate option, you w
 
 #####Selecting Records
 
-Select the directory that contains your records. Keep in mind that ANTS transfers folders, not individual files, so you will not see any files that may be present in the folder you select. You are encouraged to select the folder where you typically store and use your records, instead of organizing or relabeling them. This will help use preserve the authenticity of the records. If there are files in the directory that you do not want to transfer, don't worry, you will be able to omit them later.
+Select the directory that contains your records. Keep in mind that ANTS transfers folders, not individual files, so you will not see any files that may be present in the folder you select. You are encouraged to select the folder where you typically store and use your records, instead of organizing or relabeling them. This will help us preserve the authenticity of the records. If there are files in the directory that you do not want to transfer, don't worry, you will be able to omit them later.
 
 Once you select the folder containing the records you want to transfer, ANTS will open its main window and list the contents of the directory:
 

@@ -5,6 +5,8 @@ import wx
 import os
 import sys
 import shutil
+import win32crypt
+import binascii
 import wx.lib.wxpTag
 from resource_path import resource_path
 
@@ -36,21 +38,28 @@ class spashDialog( wx.Dialog ):
 				print "moving config.xml"
 				shutil.copy2("config.xml", self.appData)
 				os.remove("config.xml")
-				
+
+			
 			#check if opened with parameters
 			if len(sys.argv) > 1:
 				#opened with file or directory parameter
 				if len(sys.argv) > 2:
-					param = sys.argv
-					del param[0]
-					param = " ".join(param)
+					antsPath = sys.argv[0]
+					cmdList = sys.argv
+					del cmdList[0]
+					param = " ".join(cmdList)
 				else:
-					param = sys.argv[1]
+					antsPath, param = sys.argv
+				#get path where ants.py or ants.exe was opened from in order to call antsFromBoot
+				fullPath = os.path.dirname(antsPath)
+				#if param is a file, take parent directory
 				if os.path.isdir(param):
 					openDir = param
 				else:
 					openDir = os.path.dirname(param)
-				fullPath = os.path.dirname(sys.argv[0])
+				#for debugging
+				#pathDialog = wx.MessageDialog(None, fullPath + "\n" + param, "path example", wx.OK | wx.ICON_ERROR)
+				#pathDialog.ShowModal()
 				if getattr(sys, 'frozen', False):
 					boot = [os.path.join(fullPath, "antsFromBoot.exe"), openDir]
 				elif __file__:
@@ -242,7 +251,6 @@ class spashDialog( wx.Dialog ):
 		else:
 			self.loginButton.SetFocus()
 		loginDialog.SetSizer(loginSizer)
-		
 		result = loginDialog.ShowModal()
 		if self.rememberBox.IsChecked():
 			try:
@@ -252,8 +260,21 @@ class spashDialog( wx.Dialog ):
 				config = configParse.getroot()
 				if config.find("login").attrib["store"].lower() == "true":
 					config.find("login").text = self.enterUser.GetValue()
+					try:
+						self.loginInput.SetLabel(self.enterUser.GetValue())
+					except:
+						pass
 				if config.find("pw").attrib["store"].lower() == "true":
-					config.find("pw").text = self.enterPassword.GetValue()
+					pwd = win32crypt.CryptProtectData(self.enterPassword.GetValue())
+					config.find('pw').text = binascii.hexlify(pwd)
+					try:
+						self.passwordInput.SetLabel(self.enterPassword.GetValue())
+					except:
+						pass
+				configString = ET.tostring(config, pretty_print=True)
+				file = open(os.path.join(self.appData, "config.xml"), "w")
+				file.write(configString)
+				file.close()
 			except:
 				pass
 		login = self.enterUser.GetValue()

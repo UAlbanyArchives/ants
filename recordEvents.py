@@ -4,6 +4,7 @@ import time
 import csv
 import os
 import sys
+import traceback
 import calendar
 import datetime
 from cStringIO import StringIO
@@ -31,6 +32,41 @@ def recordEvents(self, dirXML):
 		else:
 			timeType = "local+" + str(time.timezone / 3600) + ":00"
 	
+	def MFTRCRDfail(item):
+		(mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(item.find("path").text)
+		recordEvents = ET.Element("recordEvents")
+		item.insert(5, recordEvents)
+		atimeXML = ET.SubElement(recordEvents, "timestamp")
+		atimeXML.text = self.timestampOutput(str(atime))
+		atimeXML.set("source", "NTFS")
+		atimeXML.set("timeType", timeType)
+		atimeXML.set("parser", "os.path")
+		atimeXML.set("type", "STANDARD_INFORMATION")
+		atimeXML.set("label", "atime")
+		
+		mtimeXML = ET.SubElement(recordEvents, "timestamp")
+		mtimeXML.text = self.timestampOutput(str(mtime))
+		mtimeXML.set("source", "NTFS")
+		mtimeXML.set("timeType", timeType)
+		mtimeXML.set("parser", "os.path")
+		mtimeXML.set("type", "STANDARD_INFORMATION")
+		mtimeXML.set("label", "mtime")
+		
+		ctimeXML = ET.SubElement(recordEvents, "timestamp")
+		ctimeXML.text = self.timestampOutput(str(ctime))
+		ctimeXML.set("source", "NTFS")
+		ctimeXML.set("timeType", timeType)
+		ctimeXML.set("parser", "os.path")
+		ctimeXML.set("type", "STANDARD_INFORMATION")
+		ctimeXML.set("label", "ctime")
+		
+		eventOsStat = ET.Element("event")
+		eventTime = str(calendar.timegm(time.gmtime()))
+		eventOsStat.set("timestamp", self.timestampOutput(eventTime))
+		eventOsStat.text = "ran os.stat to gather NTFS timestamps"
+		item.find("curatorialEvents").append(eventOsStat)
+		return item
+	
 	if self.adminTest == True:
 		
 		for item in dirXML.iter():
@@ -40,120 +76,130 @@ def recordEvents(self, dirXML):
 					self.progressBar.Update(self.progressCount, self.progressMsg)
 					readMFT = launchWithoutConsole("tools\\MFTRCRD.exe", [item.find("path").text, '-d', 'indxdump=off', '1024', '-s'])
 					out, err = readMFT.communicate()
-					recordEvents = ET.Element("recordEvents")
-					item.insert(5, recordEvents)
-					out2 = out.replace("\n", "</line><line>")
-					out3 = out2.replace("<line>\r</line>", "</block><block>")
-					out4 = "<root><block><line>" + out3 + "</line></block></root>"
-					out5 = out4.replace("\n", "")
-					out6 = out5.replace("\r", "")
-					out7 = out6.replace("<line></line>", "")
-					try:
-						output = ET.fromstring(out7)
-						for line in output.iter("line"):
-							if line.text.strip().startswith("$STANDARD_INFORMATION 1:"):
-								SI = line.getparent()
-								for timestamp in SI:
-									if timestamp.text.strip().startswith("File Create Time (CTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "STANDARD_INFORMATION")
-										timestampXML.set("label", "File_Create_Time")
-									elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "STANDARD_INFORMATION")
-										timestampXML.set("label", "File_Modified_Time")
-									elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "STANDARD_INFORMATION")
-										timestampXML.set("label", "MFT_Entry_modified_Time")
-									elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "STANDARD_INFORMATION")
-										timestampXML.set("label", "File_Last_Access_Time")
-							elif line.text.strip().startswith("$FILE_NAME 1:"):
-								FN = line.getparent()
-								for timestamp in FN:
-									if timestamp.text.strip().startswith("File Create Time (CTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "FILE_NAME")
-										timestampXML.set("label", "File_Create_Time")
-									elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "FILE_NAME")
-										timestampXML.set("label", "File_Modified_Time")
-									elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "FILE_NAME")
-										timestampXML.set("label", "MFT_Entry_modified_Time")
-									elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
-										timestampXML = ET.SubElement(recordEvents, "timestamp")
-										mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
-										mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
-										timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
-										timestampXML.text = self.timestampOutput(timeString)
-										timestampXML.set("source", "NTFS")
-										timestampXML.set("timeType", timeType)
-										timestampXML.set("parser", "MFTRCRD")
-										timestampXML.set("type", "FILE_NAME")
-										timestampXML.set("label", "File_Last_Access_Time")
-						eventMFTRCRD = ET.Element("event")
-						eventTime = str(calendar.timegm(time.gmtime()))
-						eventMFTRCRD.set("timestamp", self.timestampOutput(eventTime))
-						eventMFTRCRD.text = "ran MFTRCRD to gather NTFS timestamps"
-						item.find("curatorialEvents").append(eventMFTRCRD)
-					except:
-						raise ValueError("Failed to parse MFTRCRD output.")
-				self.progressCount = self.progressCount + 1
-		print "ran MFTRCRD"
+					#look at 7th line in output to check for error
+					if len(out.splitlines()) < 8:
+						item = MFTRCRDfail(item)
+						line7 = ""
+					else:
+						line7 = out.splitlines()[7]
+					if "Error in function CreateFile for:" in line7:
+						item = MFTRCRDfail(item)
+					else:
+						recordEvents = ET.Element("recordEvents")
+						item.insert(5, recordEvents)
+						out2 = out.replace("\n", "</line><line>")
+						out3 = out2.replace("<line>\r</line>", "</block><block>")
+						out4 = "<root><block><line>" + out3 + "</line></block></root>"
+						out5 = out4.replace("\n", "")
+						out6 = out5.replace("\r", "")
+						out7 = out6.replace("<line></line>", "")
+						out8 = out7.replace("&", "&amp;")
+						try:
+							output = ET.fromstring(out8)
+							for line in output.iter("line"):
+								if line.text.strip().startswith("$STANDARD_INFORMATION 1:"):
+									SI = line.getparent()
+									for timestamp in SI:
+										if timestamp.text.strip().startswith("File Create Time (CTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "STANDARD_INFORMATION")
+											timestampXML.set("label", "File_Create_Time")
+										elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "STANDARD_INFORMATION")
+											timestampXML.set("label", "File_Modified_Time")
+										elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "STANDARD_INFORMATION")
+											timestampXML.set("label", "MFT_Entry_modified_Time")
+										elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "STANDARD_INFORMATION")
+											timestampXML.set("label", "File_Last_Access_Time")
+								elif line.text.strip().startswith("$FILE_NAME 1:"):
+									FN = line.getparent()
+									for timestamp in FN:
+										if timestamp.text.strip().startswith("File Create Time (CTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "FILE_NAME")
+											timestampXML.set("label", "File_Create_Time")
+										elif timestamp.text.strip().startswith("File Modified Time (ATime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "FILE_NAME")
+											timestampXML.set("label", "File_Modified_Time")
+										elif timestamp.text.strip().startswith("MFT Entry modified Time (MTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "FILE_NAME")
+											timestampXML.set("label", "MFT_Entry_modified_Time")
+										elif timestamp.text.strip().startswith("File Last Access Time (RTime):"):
+											timestampXML = ET.SubElement(recordEvents, "timestamp")
+											mftrcrdTime = timestamp.text.split(": ")[1].strip()[:-9]
+											mftrcrdPattern = "%Y-%m-%d %H:%M:%S"
+											timeString = str(calendar.timegm(time.strptime(mftrcrdTime, mftrcrdPattern)))
+											timestampXML.text = self.timestampOutput(timeString)
+											timestampXML.set("source", "NTFS")
+											timestampXML.set("timeType", timeType)
+											timestampXML.set("parser", "MFTRCRD")
+											timestampXML.set("type", "FILE_NAME")
+											timestampXML.set("label", "File_Last_Access_Time")
+							eventMFTRCRD = ET.Element("event")
+							eventTime = str(calendar.timegm(time.gmtime()))
+							eventMFTRCRD.set("timestamp", self.timestampOutput(eventTime))
+							eventMFTRCRD.text = "ran MFTRCRD to gather NTFS timestamps"
+							item.find("curatorialEvents").append(eventMFTRCRD)
+						except:
+							raise ValueError("Failed to parse MFTRCRD output.")
+					self.progressCount = self.progressCount + 1
+		print "ran MFTRCRD to gather filesystem artifacts"
 		
 	else:
 		if self.timestampOption.GetSelection() == 0:
