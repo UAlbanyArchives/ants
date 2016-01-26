@@ -11,7 +11,7 @@ ANTS is offered as an open beta for external testing. Development is ongoing, bu
 
 ANTS is available publicly primarily as a proof of concept and a tool for experimentation. While we hope to implement ANTS at the University at Albany, SUNY, any external users should plan to require their own development and support.
 
-Comments and/or feature requests are welcome.
+Comments, bug reports, and feature requests are welcome.
 
 ##Features
 
@@ -453,7 +453,7 @@ ANTS uses the bag-it standard as the basis for its SIP. Here is an example of an
     |				<timestamp source="NTFS" timeType="local+4:00" parser="MFTRCRD" type="FILE_NAME" label="File_Last_Access_Time">2015-03-25 14:16:21</timestamp>
     |			  </recordEvents>
     |			</file>
-    |			<folder nume="subDirectory">
+    |			<folder name="subDirectory">
     |				...
     |			</folder>
     |			...
