@@ -9,6 +9,12 @@ import datetime
 import shutil
 import win32crypt
 import binascii
+import threading
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from resource_path import resource_path
+
+import antsGUI as gui
 
 def produceReceipt(self, xmlSource):
 	
@@ -131,12 +137,12 @@ def checkReceiveFiles(self, xmlSource):
 			elif self.m_radioBox1.GetSelection() == 2:
 				transferMethod = "ftptls"
 			elif self.m_radioBox1.GetSelection() == 3:
-				transferMethod = "onedrive"
+				transferMethod = "googledrive"
 			else:
 				transferMethod = "ftp"
 			
 		#login for non-network transfers
-		if transferMethod != "network":
+		if transferMethod != "network" and transferMethod != "googledrive":
 			if len(login) < 1 or len(pw) < 1:
 				login, pw = self.loginBox(login, pw)
 					
@@ -199,8 +205,161 @@ def checkReceiveFiles(self, xmlSource):
 								saveProgress.Update(saveCount, saveMsg)
 					saveRequest.Destroy()
 			selectFiles.Destroy()
-		elif transferMethod =="onedrive":
-			pass #in development
+		elif transferMethod =="googledrive":
+			
+			try:
+				try:
+					shutil.copy2(resource_path("data.json"), os.path.join(os.getcwd(), "client_secrets.json"))
+				except:
+					raise ValueError("Client error, might be a permissions issue. Please consult your archivist.")
+				
+				try:
+					#Google Drive login
+					def googleLogin(googlePath, gauth, t_stop):
+						# Try to load saved client credentials
+						gauth.LoadCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+						if gauth.credentials is None:
+							# Authenticate if they're not there
+							gauth.LocalWebserverAuth()
+						elif gauth.access_token_expired:
+							# Refresh them if expired
+							gauth.Refresh()
+						else:
+							# Initialize the saved creds
+							gauth.Authorize()
+						# Save the current credentials to a file
+						gauth.SaveCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+						self.drive = GoogleDrive(gauth)			
+						self.childFrame.Close()
+					
+					gauth = GoogleAuth()
+					self.t_stop= threading.Event()
+					t = threading.Thread(name="GoogleLogin", target=googleLogin, args=(receiveLocation, gauth, self.t_stop))
+					t.start()
+					try:
+						self.childFrame = gui.loginFrame(self)
+					except:
+						print traceback.format_exc()
+					self.childFrame.ShowModal()
+				except:
+					raise ValueError("GoogleDrive Login Error")
+					
+				def driveDownload(driveInstance, fileList):
+					#ask which files to download
+					selectFiles = wx.MultiChoiceDialog( self, "Select Files to Download", "Download Records from the University Archives", fileList)
+					overwriteSwitch = False
+					overwriteAsk = False
+					if selectFiles.ShowModal() == wx.ID_OK:
+						selections = selectFiles.GetSelections()
+						if len(selections) > 0:
+							strings = [fileList[x] for x in selections]
+							saveRequest = wx.DirDialog(None, "Select a folder to save your requested files:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+							if saveRequest.ShowModal() == wx.ID_OK:
+								saveLocation =  saveRequest.GetPath()
+								saveGoal = len(strings)
+								saveCount= 0
+								saveProgress = wx.ProgressDialog("Downloading Requested Files", "Downloading files...",  maximum=saveGoal, parent=self, style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE)
+								for requestedFile in strings:
+									saveMsg = "Downloading " + requestedFile + "..."
+									saveProgress.Update(saveCount, saveMsg)
+									if os.path.isfile(os.path.join(saveLocation, requestedFile)):
+										if overwriteAsk == False:
+											askOverwrite = wx.MessageDialog(None, "Some of the files you requested were already found. Would you like to overwrite them?", "Overwrite Existing Files?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_WARNING)
+											overwriteAsk = True
+											if askOverwrite.ShowModal() == wx.ID_YES:
+												overwriteSwitch = True
+										if overwriteSwitch == True:
+											for file in check_list:
+												if file["title"] == requestedFile:
+													fileDownload = driveInstance.CreateFile({'id': file['id']})
+													fileDownload.GetContentFile(os.path.join(saveLocation, requestedFile))
+									for file in check_list:
+										if file["title"] == requestedFile:
+											fileDownload = driveInstance.CreateFile({'id': file['id']})
+											fileDownload.GetContentFile(os.path.join(saveLocation, requestedFile))
+											
+									saveCount = saveCount + 1
+									if saveCount >= saveGoal:
+										saveProgress.Destroy()
+										successNotice = wx.MessageDialog(None, 'The files you requested were downloaded successfully.', 'Request was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+										successNotice.ShowModal()
+									else:
+										saveProgress.Update(saveCount, saveMsg)
+							saveRequest.Destroy()
+					selectFiles.Destroy()
+					
+				try:
+					pathList = receiveLocation.split("/")
+					if pathList < 2:
+						#no subfolders
+						
+						#get availible files
+						fileList = []
+						check_list = self.drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+						for file in check_list:
+							fileList.append(file["title"])
+						
+						#select and download files from list
+						driveDownload(self.drive, fileList)
+					
+					
+					else:
+						def findSubFolder(pathList, folderId, folderTitle):
+							sub_list = self.drive.ListFile({'q': "'" + folderId + "' in parents and trashed=false"}).GetList()
+							match = False
+							for folder in sub_list:
+								if folder["title"] == pathList[0]:
+									match = True
+									folderId = folder["id"]
+									folderTitle = folder["title"]
+							if match == True:
+								if len(pathList) > 1:
+									del pathList[0]
+									findSubFolder(pathList, folderId, folderTitle)
+								else:
+									print "Found GoogleDrive destination path"
+									self.childFrame.Destroy()
+									return folderId
+							else:
+								print "Google path failed"
+								self.childFrame.Destroy()
+								if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+									os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+								noAuth = wx.MessageDialog(None, 'Google path failed. Login was successful but subfolder ' + folderTitle +  ' was not found.', 'Login Failed', wx.OK | wx.ICON_WARNING)
+								noAuth.ShowModal()
+								return folderId
+								
+						first_list = self.drive.ListFile({'q': "sharedWithMe=True"}).GetList()
+						match = False
+						for folder in first_list:
+							if folder["title"] == pathList[0]:
+								match = True
+								folderId = folder["id"]
+								folderTitle = folder["title"]
+						if match == True:
+							if len(pathList) > 1:
+								del pathList[0]
+								folderId = findSubFolder(pathList, folderId, folderTitle)
+						
+						#get availible files
+						fileList = []
+						check_list = self.drive.ListFile({'q': "'" + folderId + "' in parents and trashed=false"}).GetList()
+						for file in check_list:
+							fileList.append(file["title"])
+						
+						#select and download files from list
+						driveDownload(self.drive, fileList)
+						
+						if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+							os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+					
+				except:
+					if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+						os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+					raise ValueError("Access to GoogleDrive failed. Error reading subfolders. Please check settings in the 'Options' tab.")
+				
+			except:
+				raise ValueError("Failed to recieve files from GoogleDrive.")
 		
 		else:
 			

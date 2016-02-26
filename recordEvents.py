@@ -17,7 +17,7 @@ def recordEvents(self, dirXML):
 		startupinfo = subprocess.STARTUPINFO()
 		startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		return subprocess.Popen([command] + args, startupinfo=startupinfo, shell=False, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-	
+		
 	#get time option
 	if self.timeZoneOption.GetSelection() == 1:
 		#posix time
@@ -40,7 +40,7 @@ def recordEvents(self, dirXML):
 		atimeXML.text = self.timestampOutput(str(atime))
 		atimeXML.set("source", "NTFS")
 		atimeXML.set("timeType", timeType)
-		atimeXML.set("parser", "os.path")
+		atimeXML.set("parser", "os.stat")
 		atimeXML.set("type", "STANDARD_INFORMATION")
 		atimeXML.set("label", "atime")
 		
@@ -48,7 +48,7 @@ def recordEvents(self, dirXML):
 		mtimeXML.text = self.timestampOutput(str(mtime))
 		mtimeXML.set("source", "NTFS")
 		mtimeXML.set("timeType", timeType)
-		mtimeXML.set("parser", "os.path")
+		mtimeXML.set("parser", "os.stat")
 		mtimeXML.set("type", "STANDARD_INFORMATION")
 		mtimeXML.set("label", "mtime")
 		
@@ -56,7 +56,7 @@ def recordEvents(self, dirXML):
 		ctimeXML.text = self.timestampOutput(str(ctime))
 		ctimeXML.set("source", "NTFS")
 		ctimeXML.set("timeType", timeType)
-		ctimeXML.set("parser", "os.path")
+		ctimeXML.set("parser", "os.stat")
 		ctimeXML.set("type", "STANDARD_INFORMATION")
 		ctimeXML.set("label", "ctime")
 		
@@ -216,7 +216,7 @@ def recordEvents(self, dirXML):
 						atimeXML.text = self.timestampOutput(str(atime))
 						atimeXML.set("source", "NTFS")
 						atimeXML.set("timeType", timeType)
-						atimeXML.set("parser", "os.path")
+						atimeXML.set("parser", "os.stat")
 						atimeXML.set("type", "STANDARD_INFORMATION")
 						atimeXML.set("label", "atime")
 						
@@ -224,7 +224,7 @@ def recordEvents(self, dirXML):
 						mtimeXML.text = self.timestampOutput(str(mtime))
 						mtimeXML.set("source", "NTFS")
 						mtimeXML.set("timeType", timeType)
-						mtimeXML.set("parser", "os.path")
+						mtimeXML.set("parser", "os.stat")
 						mtimeXML.set("type", "STANDARD_INFORMATION")
 						mtimeXML.set("label", "mtime")
 						
@@ -232,7 +232,7 @@ def recordEvents(self, dirXML):
 						ctimeXML.text = self.timestampOutput(str(ctime))
 						ctimeXML.set("source", "NTFS")
 						ctimeXML.set("timeType", timeType)
-						ctimeXML.set("parser", "os.path")
+						ctimeXML.set("parser", "os.stat")
 						ctimeXML.set("type", "STANDARD_INFORMATION")
 						ctimeXML.set("label", "ctime")
 						

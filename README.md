@@ -4,10 +4,7 @@ for executables to run without dependencies, see [http://library.albany.edu/arch
 
 ##Project Status
 
-ANTS is offered as an open beta for external testing. Development is ongoing, but near-completion. Documentation will be available soon. Some additional planned features before release are:
-
-+ Support for Email notifications for each transfer attempt
-+ Support for using Microsoft OneDrive as a transfer method
+ANTS is offered as an open beta for external testing. Development is ongoing, but near-completion. further documentation will be available soon.
 
 ANTS is available publicly primarily as a proof of concept and a tool for experimentation. While we hope to implement ANTS at the University at Albany, SUNY, any external users should plan to require their own development and support.
 
@@ -20,7 +17,7 @@ Comments, bug reports, and feature requests are welcome.
 * Makes use of basic digital forensics tools to gather filesystem metadata and create a robust SIP in records' native environment before transfer.
 * Gathers MFT $STANDARDINFORMATION and $FILENAME MAC timestamps of each file.
 * Designed to send reference requests and receive files from within the GUI.
-* Transfers over network shares with existing LDAP authentication or FTP (with or without TLS).
+* Transfers over network shares with existing LDAP authentication, FTP (with or without TLS), and GoogleDrive.
 * Can be configured remotely prior to user installation.
 * Maintains local receipt for all transferred materials with identification for easy future requests.
 * Developed for Windows and NTFS filesystems.

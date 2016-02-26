@@ -17,6 +17,10 @@ import errno
 from transfer import transferModule
 from ftplib import FTP
 from ftplib import FTP_TLS
+import threading
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from resource_path import resource_path
  
 #import the newly created GUI file
 import antsGUI as gui
@@ -27,7 +31,7 @@ class ANTSFrame(gui.mainFrame):
 	#constructor
 	def __init__(self, parent):
 		
-		antsVersion = "0.5 (beta)"
+		self.antsVersion = "0.6 (beta)"
 		
 		#checks if booted with admin privileges
 		self.adminTest = False
@@ -73,6 +77,12 @@ class ANTSFrame(gui.mainFrame):
 				requestEmailXML = ET.SubElement(antsConfigXML, 'requestEmail')
 				requestSubjectXML = ET.SubElement(antsConfigXML, 'requestSubject')
 				requestBodyXML = ET.SubElement(antsConfigXML, 'requestBody')
+				smtpHostXML = ET.SubElement(antsConfigXML, 'smtpHost')
+				smtpPortXML = ET.SubElement(antsConfigXML, 'smtpPort')
+				notificationEmailXML = ET.SubElement(antsConfigXML, 'notificationEmail')
+				notificationEmailPwXML = ET.SubElement(antsConfigXML, 'notificationEmailPw')
+				notificationEmailSubjectXML = ET.SubElement(antsConfigXML, 'notificationEmailSubject')
+				notifyEmailXML = ET.SubElement(antsConfigXML, 'notifyEmail')
 				configXMLString = ET.tostring(antsConfigXML, pretty_print=True)
 				file = open(os.path.join(self.appData, "config.xml"), "w")
 				file.write(configXMLString)
@@ -81,21 +91,33 @@ class ANTSFrame(gui.mainFrame):
 			parser = ET.XMLParser(remove_blank_text=True)
 			configParse = ET.parse(configXML, parser)
 			config = configParse.getroot()
-			if len(self.readXML(config, "pw")) > 0:
-				try:
-					pwd = binascii.unhexlify(self.readXML(config, "pw"))
-					getPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
-				except:
-					exceptMsg = traceback.format_exc()
-					self.errorMessage("Error reading password from configuration data. Password must be encrypted and cannot be read from config.xml. An empty password will be substituted.", exceptMsg)
-					getPw = ""
-			else:
-				getPw = ""
+			if  0 < len(self.readXML(config, "notificationEmailPw")) < 25:
+				emailPwd = win32crypt.CryptProtectData(self.readXML(config, "notificationEmailPw"))
+				config.find('notificationEmailPw').text = binascii.hexlify(emailPwd)
+				configXMLString = ET.tostring(config, pretty_print=True)
+				file = open(os.path.join(self.appData, "config.xml"), "w")
+				file.write(configXMLString)
+				file.close()
+			def deCode(value):
+				if len(value) > 0:
+					try:
+						pwd = binascii.unhexlify(value)
+						return win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+					except:
+						exceptMsg = traceback.format_exc()
+						self.errorMessage("Error reading password from configuration data. Password must be encrypted and cannot be read from config.xml. An empty password will be substituted.", exceptMsg)
+						return ""
+				else:
+					return ""
+			getPw = deCode(self.readXML(config, "pw"))
+			getEmailPw = deCode(self.readXML(config, "notificationEmailPw"))
 			configData = {"creator": self.readXML(config, "creator"), "creatorId": self.readXML(config, "creatorId"), "donor": self.readXML(config, "donor"), "role": self.readXML(config, "role"), \
 			"email": self.readXML(config, "email"), "office": self.readXML(config, "office"), "address1": self.readXML(config, "address1"), "address2": self.readXML(config, "address2"), "address3": self.readXML(config, "address3"), \
 			"transferMethod": self.readXML(config, "transferMethod"), "transferLocation": self.readXML(config, "transferLocation"), "receiveLocation": self.readXML(config, "receiveLocation"), "login": self.readXML(config, "login"), \
 			"password": getPw, "timestampTool": self.readXML(config, "timestampTool"), "timeZone": self.readXML(config, "timeZone"), "error": self.readXML(config, "error"), "compress": self.readXML(config, "compress"), \
-			"checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt"), "compressCheckList": config.find("compress").attrib["lock"], "loginStore": config.find("login").attrib["store"], "pwStore": config.find("pw").attrib["store"]}
+			"checksum": self.readXML(config, "checksum"), "receipt": self.readXML(config, "receipt"), "compressCheckList": config.find("compress").attrib["lock"], "loginStore": config.find("login").attrib["store"], \
+			"pwStore": config.find("pw").attrib["store"], "smtpHost": self.readXML(config, "smtpHost"), "smtpPort": self.readXML(config, "smtpPort"), "notificationEmail": self.readXML(config, "notificationEmail"), \
+			"notificationEmailPw": getEmailPw, "notificationEmailSubject": self.readXML(config, "notificationEmailSubject"), "notifyEmail": self.readXML(config, "notifyEmail"),}
 			if "default" in config.find('compress').attrib:
 				configData.update({"compressDefault": config.find('compress').attrib["default"]})
 		except:
@@ -134,7 +156,7 @@ class ANTSFrame(gui.mainFrame):
 				notesXML = ET.SubElement(profileXML, "notes")
 				creatorXML = ET.SubElement(profileXML, "creator")
 				creatorIdXML = ET.SubElement(profileXML, "creatorId")
-				donotXML = ET.SubElement(profileXML, "donor")
+				donorXML = ET.SubElement(profileXML, "donor")
 				roleXML = ET.SubElement(profileXML, "role")
 				emailXML = ET.SubElement(profileXML, "email")
 				officeXML = ET.SubElement(profileXML, "office")
@@ -143,6 +165,7 @@ class ANTSFrame(gui.mainFrame):
 				address3XML = ET.SubElement(profileXML, "address3")
 				methodXML = ET.SubElement(profileXML, "method")
 				locationXML = ET.SubElement(profileXML, "location")
+				extentXML = ET.SubElement(profileXML, "extent")
 				folderXML = ET.SubElement(rootXML, "folder")
 				folderXML.set('name', os.path.basename(self.sourceDir))
 				folderXML.set('check', 'True')
@@ -153,7 +176,7 @@ class ANTSFrame(gui.mainFrame):
 				folderDesc = ET.SubElement(folderXML, "description")
 				folderAccess = ET.SubElement(folderXML, "access")
 				curatorialEvent = ET.SubElement(folderXML, "curatorialEvents")
-				curatorialEvent.set("version", antsVersion)
+				curatorialEvent.set("version", self.antsVersion)
 				def dir2XML(path, root):
 					for item in os.listdir(path):
 						itempath = os.path.join(path, item)
@@ -168,7 +191,7 @@ class ANTSFrame(gui.mainFrame):
 							descXML = ET.SubElement(itemXML, "description")
 							accessXML = ET.SubElement(itemXML, "access")
 							curatorialEvent = ET.SubElement(itemXML, "curatorialEvents")
-							curatorialEvent.set("version", antsVersion)
+							curatorialEvent.set("version", self.antsVersion)
 							dir2XML(os.path.join(path, item), itemXML)
 						elif os.path.isfile(itempath):
 							itemXML = ET.SubElement(root, "file")
@@ -181,7 +204,7 @@ class ANTSFrame(gui.mainFrame):
 							descXML = ET.SubElement(itemXML, "description")
 							accessXML = ET.SubElement(itemXML, "access")
 							curatorialEvent = ET.SubElement(itemXML, "curatorialEvents")
-							curatorialEvent.set("version", antsVersion)
+							curatorialEvent.set("version", self.antsVersion)
 				dir2XML(self.sourceDir, folderXML)
 				dirXMLString = ET.tostring(rootXML, pretty_print=True)
 				file = open(os.path.join(self.appData, "~directory.xml"), "w")
@@ -378,7 +401,7 @@ class ANTSFrame(gui.mainFrame):
 				elif self.m_radioBox1.GetSelection() == 2:
 					config.find('transferMethod').text = "ftptls"
 				elif self.m_radioBox1.GetSelection() == 3:
-					config.find('transferMethod').text = "onedrive"
+					config.find('transferMethod').text = "googledrive"
 				else:
 					config.find('transferMethod').text = "network"
 				if config.find("login").attrib["store"].lower() == "true":
@@ -631,6 +654,11 @@ class ANTSFrame(gui.mainFrame):
 		return login, pw
 		
 	
+	def stopLogin(self, event):
+		print "Google login aborted"
+		self.t_stop.set()
+		self.childFrame.Destroy()
+	
 	def testLocation(self, location):
 		if not len(location) > 0:
 			noLoc = wx.MessageDialog(None, 'You must enter a local or network path as your transfer destination.', 'Location Test Error', wx.OK | wx.ICON_ERROR)
@@ -645,12 +673,104 @@ class ANTSFrame(gui.mainFrame):
 					badDir = wx.MessageDialog(None, 'Invalid location, did not find the directory you entered.', 'Incorrect Directory', wx.OK | wx.ICON_EXCLAMATION)
 					badDir.ShowModal()
 			elif  self.m_radioBox1.GetSelection() == 3:
-				#test OneDrive login
-				#login = self.loginInput.GetValue()
-				#pw = self.passwordInput.GetValue()
-				#if len(login) < 1 or len(pw) < 1:
-					#login, pw = self.loginBox(login, pw)
-				pass #under development
+			
+				try:
+					shutil.copy2(resource_path("data.json"), os.path.join(os.getcwd(), "client_secrets.json"))
+				except:
+					raise ValueError("Client error, might be a permissions issue. Please consult your archivist.")
+			
+				#test Google Drive login
+				def googleLogin(googlePath, gauth, t_stop):
+					# Try to load saved client credentials
+					gauth.LoadCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+					if gauth.credentials is None:
+						# Authenticate if they're not there
+						gauth.LocalWebserverAuth()
+					elif gauth.access_token_expired:
+						# Refresh them if expired
+						gauth.Refresh()
+					else:
+						# Initialize the saved creds
+						gauth.Authorize()
+					# Save the current credentials to a file
+					gauth.SaveCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+					drive = GoogleDrive(gauth)
+					pathList = googlePath.split("/")
+					if len(pathList) < 1:
+						print "Google login successful"
+						self.childFrame.Destroy()
+						if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+							os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+						yesAuth = wx.MessageDialog(None, 'Google login successful.', 'Login Successful', wx.OK | wx.ICON_INFORMATION)
+						yesAuth.ShowModal()
+						return
+					else:
+						
+						def checkSubFolders(pathList, folderId, folderTitle):
+							sub_list = drive.ListFile({'q': "'" + folderId + "' in parents and trashed=false"}).GetList()
+							match = False
+							for folder in sub_list:
+								if folder["title"] == pathList[0]:
+									match = True
+									folderId = folder["id"]
+									folderTitle = folder["title"]
+							if match == True:
+								if len(pathList) > 1:
+									del pathList[0]
+									checkSubFolders(pathList, folderId, folderTitle)
+								else:
+									print "Google login successful"
+									self.childFrame.Destroy()
+									if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+										os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+									yesAuth = wx.MessageDialog(None, 'Google login successful.', 'Login Successful', wx.OK | wx.ICON_INFORMATION)
+									yesAuth.ShowModal()
+									return
+							else:
+								print "Google path failed"
+								self.childFrame.Destroy()
+								if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+									os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+								noAuth = wx.MessageDialog(None, 'Google path failed. Login was successful but subfolder ' + folderTitle +  ' was not found.', 'Login Failed', wx.OK | wx.ICON_WARNING)
+								noAuth.ShowModal()
+								return
+						
+						first_list = drive.ListFile({'q': "sharedWithMe=True"}).GetList()
+						match = False
+						for folder in first_list:
+							if folder["title"] == pathList[0]:
+								match = True
+								folderId = folder["id"]
+								folderTitle = folder["title"]
+						if match == True:
+							if len(pathList) > 1:
+								del pathList[0]
+								checkSubFolders(pathList, folderId, folderTitle)
+							else:
+								print "Google login successful"
+								self.childFrame.Destroy()
+								if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+									os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+								yesAuth = wx.MessageDialog(None, 'Google login successful.', 'Login Successful', wx.OK | wx.ICON_INFORMATION)
+								yesAuth.ShowModal()
+								return
+						else:
+							print "Google path failed"
+							self.childFrame.Destroy()
+							if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+								os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+							noAuth = wx.MessageDialog(None, 'Google path failed. Login was successful but folder was not found.', 'Login Failed', wx.OK | wx.ICON_WARNING)
+							noAuth.ShowModal()
+							return				
+				
+				gauth = GoogleAuth(resource_path('client_secrets.json'))
+				self.t_stop= threading.Event()
+				t = threading.Thread(name="GoogleLogin", target=googleLogin, args=(location, gauth, self.t_stop))
+				t.start()
+				self.childFrame = gui.loginFrame(self)
+				self.childFrame.ShowModal()
+				
+					
 			else:
 				#test FTP location and login
 				try:
@@ -820,6 +940,17 @@ class ANTSFrame(gui.mainFrame):
 				fp = os.path.join(dirpath, f)
 				total_size += os.path.getsize(fp)
 		return total_size
+		
+	# from http://stackoverflow.com/questions/14996453/python-libraries-to-calculate-human-readable-filesize-from-bytes
+	def humansize(self, nbytes):
+		suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+		if nbytes == 0: return '0 B'
+		i = 0
+		while nbytes >= 1024 and i < len(suffixes)-1:
+			nbytes /= 1024.
+			i += 1
+		f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+		return '%s %s' % (f, suffixes[i])
 		
 	
 	#handles windows read-only directories

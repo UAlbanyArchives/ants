@@ -14,6 +14,15 @@ import bagit
 import zipfile
 import copy
 import shortuuid
+import smtplib
+import win32crypt
+import binascii
+import threading
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from resource_path import resource_path
+
+import antsGUI as gui
 
 
 def transferModule(self):
@@ -96,14 +105,14 @@ def transferModule(self):
 			else:
 				compressCheckXML = False
 		if compressCheckXML is False:
-			progressGoal = recordsCount + recordsCount + 12
+			progressGoal = recordsCount + recordsCount + 14
 		else:
 			progressGoal = recordsCount + 8
 		if self.adminTest == True:
 			progressGoal = progressGoal + totalCount
 		else:
 			if self.timestampOption.GetSelection() == 1:
-				progressGoal = progressGoal + 12
+				progressGoal = progressGoal + 14
 			else:
 				progressGoal = progressGoal + 1
 		print "Anticipated stages: " + str(progressGoal)
@@ -138,25 +147,50 @@ def transferModule(self):
 					if itemXML.attrib['check'] == "True":							
 						if os.path.isdir(path):
 							self.progressMsg = self.progressMsgRoot + "Gathering " + item
-							self.progressBar.Update(self.progressCount, self.progressMsg)
+							try:
+								self.progressBar.Update(self.progressCount, self.progressMsg)
+							except:
+								exceptMsg = traceback.format_exc()
+								print exceptMsg
+								raise ValueError("Failed update progress bar while gathering " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 							os.makedirs(os.path.join(destDir, item))
 							shutil.copystat(path, os.path.join(destDir, item))
 							self.progressCount = self.progressCount + 1
-							self.progressBar.Update(self.progressCount, self.progressMsg)
+							try:
+								self.progressBar.Update(self.progressCount, self.progressMsg)
+							except:
+								exceptMsg = traceback.format_exc()
+								print exceptMsg
+								raise ValueError("Failed update progress bar while gathering " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 							countCopyXML(path, os.path.join(destDir, item), dirXML)
 						elif os.path.isfile(path):
 							self.progressMsg = self.progressMsgRoot + "Gathering " + item
-							self.progressBar.Update(self.progressCount, self.progressMsg)
+							try:
+								self.progressBar.Update(self.progressCount, self.progressMsg)
+							except:
+								exceptMsg = traceback.format_exc()
+								print exceptMsg
+								raise ValueError("Failed update progress bar while gathering " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 							shutil.copy2(path, destDir)
 							self.progressCount = self.progressCount + 1
-							self.progressBar.Update(self.progressCount, self.progressMsg)
+							try:
+								self.progressBar.Update(self.progressCount, self.progressMsg)
+							except:
+								exceptMsg = traceback.format_exc()
+								print exceptMsg
+								raise ValueError("Failed update progress bar while gathering " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 						else:
 							print "error: " + path
 		
 		#run forensics tools
 		try:
 			self.progressMsg = self.progressMsgRoot + "Gathering metadata..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while gathering metadata. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			from recordEvents import recordEvents
 			dirXML = recordEvents(self, dirXML)
 			self.progressCount = self.progressCount + 1
@@ -176,7 +210,12 @@ def transferModule(self):
 		#move files to new directory
 		try:
 			self.progressMsg = self.progressMsgRoot + "Gathering files..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while gathering files. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			accessionNumber = dirXML.attrib['number']
 			if accessionNumber.startswith("-"):
 				accessionNumber = "accession" + accessionNumber
@@ -209,7 +248,12 @@ def transferModule(self):
 		#bag directory
 		try:
 			self.progressMsg = self.progressMsgRoot + "Bagging files..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while bagging files. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			bagInfo = {"accession": accessionNumber}
 			for profileInfo in dirXML.find("profile"):
 				if profileInfo.text:
@@ -250,7 +294,12 @@ def transferModule(self):
 						item.find("curatorialEvents").append(eventTransfer)
 			
 			self.progressCount = self.progressCount + 1
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while updating Curatorial Events. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 		except:
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
@@ -260,7 +309,12 @@ def transferModule(self):
 		#write to receipt
 		try:
 			self.progressMsg = self.progressMsgRoot + "Writing receipt..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while writing receipt. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			if os.path.isfile(os.path.join(self.appData, "receipt.xml")):
 				parser = ET.XMLParser(remove_blank_text=True)
 				recriptParse = ET.parse(os.path.join(self.appData, "receipt.xml"), parser)
@@ -278,7 +332,7 @@ def transferModule(self):
 			else:
 				#submitted time is local
 				accessionXML.set('time', 'local')
-			receiptRoot.append(accessionXML)
+			receiptRoot.insert(0, accessionXML)
 			profileXML= copy.deepcopy(dirXML.find("profile"))
 			accessionXML.append(profileXML)
 			for item in dirXML.iter():
@@ -295,7 +349,12 @@ def transferModule(self):
 						idXML.text = item.find('id').text
 						accessionXML.append(itemXML)
 			self.progressCount = self.progressCount + 1
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while finalizing receipt. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 		except:
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
@@ -305,7 +364,12 @@ def transferModule(self):
 		#remove unwanted files from XML
 		try:
 			self.progressMsg = self.progressMsgRoot + "Removing records of unwanted files..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while removing unwanted files from XML. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			deleteList = []
 			for record in dirXML.iter():
 				if 'name' in record.attrib:
@@ -321,17 +385,37 @@ def transferModule(self):
 			for element in deleteList:
 				element[1].remove(element[0])
 			self.progressCount = self.progressCount + 1
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while removing unwanted files from XML. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 		except:
 			if os.path.isdir(bagDir):
 				shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 				raise ValueError("Failed to remove unwanted files from XML.")
-			
+		
+		#get package size
+		dirSize = 0
+		for dirpath, dirnames, filenames in os.walk(bagDir):
+			for f in filenames:
+				fp = os.path.join(dirpath, f)
+				dirSize += os.path.getsize(fp)
+		extent = str(dirSize)
+		extentUnit = "bytes"
+		dirXML.find("profile/extent").text = extent
+		dirXML.find("profile/extent").set("unit", extentUnit)
 		
 		#write XML to file and update bag manifests
 		try:
 			self.progressMsg = self.progressMsgRoot + "Writing metadata and finalizing manifests..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while removing finalizing manifests. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			#write submission time to XML
 			eventTime = str(calendar.timegm(time.gmtime()))
 			dirXML.set('submitted', self.timestampOutput(eventTime))
@@ -352,9 +436,14 @@ def transferModule(self):
 		
 		#compress bag?
 		try:
-			if compressCheckXML is True:
+			if compressCheckXML is True or self.m_radioBox1.GetSelection() == 3:
 				self.progressMsg = self.progressMsgRoot + "Compressing data..."
-				self.progressBar.Update(self.progressCount, self.progressMsg)
+				try:
+					self.progressBar.Update(self.progressCount, self.progressMsg)
+				except:
+					exceptMsg = traceback.format_exc()
+					print exceptMsg
+					raise ValueError("Failed update progress bar while compressing data. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 				if self.get_size(bagDir) >= 2000000000:
 					raise ValueError("The directory you are trying to transfer is larger than 2GB and cannot be compressed.")
 				else:
@@ -366,10 +455,15 @@ def transferModule(self):
 						raise ValueError("Unable to read compression selection.")
 					shutil.rmtree(bagDir, ignore_errors=False, onerror=self.handleRemoveReadonly)
 					self.progressCount = self.progressCount + 1
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while compressing data. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			else:
 				finalPackage = bagDir
-			return finalPackage, locationText, accessionNumber, receiptRoot, progressGoal
+			return finalPackage, locationText, accessionNumber, receiptRoot, progressGoal, extent, extentUnit
 		except:
 			exception = traceback.format_exc()
 			try:
@@ -402,26 +496,51 @@ def transferModule(self):
 				path = os.path.join(source, item)
 				if os.path.isdir(path):
 					self.progressMsg = self.progressMsgRoot + "Transferring " + item
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while transferring " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 					os.makedirs(os.path.join(destination, item))
 					shutil.copystat(path, os.path.join(destination, item))
 					self.progressCount = self.progressCount + 1
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while transferring " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 					countCopy(path, os.path.join(destination, item))
 				elif os.path.isfile(path):
 					self.progressMsg = self.progressMsgRoot + "Transferring " + item
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while transferring " + item + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 					shutil.copy2(path, destination)
 					self.progressCount = self.progressCount + 1
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while transferring " + path + ". Reached " + str(self.progressCount) + " of " + str(progressGoal))
 				else:
 					print "error: " + path
 							
 		#copy SIP to destination
 		try:
 			self.progressMsg = self.progressMsgRoot + "Transferring to the Archives..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
-			#check if finalPackage already exists in transfer location, add OVER to prevent error or overwrite
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while starting to transfer. Reached " + str(self.progressCount) + " of " + str(progressGoal))
+			#check if finalPackage already exists in transfer location, add UUID to prevent collisions
 			if os.path.exists(os.path.join(locationText, os.path.basename(finalPackage))):
 				transferDir = os.path.dirname(finalPackage)
 				packageName = os.path.basename(finalPackage)
@@ -437,10 +556,16 @@ def transferModule(self):
 			elif os.path.isfile(finalPackage):
 				shutil.copy2(finalPackage, locationText)
 				os.remove(finalPackage)
+				self.progressCount = self.progressCount + 1
+				self.progressMsg = self.progressMsgRoot + "Finished transfer of compressed package..."
+				try:
+					self.progressBar.Update(self.progressCount, self.progressMsg)
+				except:
+					exceptMsg = traceback.format_exc()
+					print exceptMsg
+					raise ValueError("Failed update progress bar while transferring compressed package. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 			else:
 				raise ValueError("Could not detect if package was file or directory.")
-			self.progressCount = self.progressCount + 1
-			self.progressBar.Update(self.progressCount, self.progressMsg)
 		except:
 			exceptMsg = "Failed to transfer bag to destination over Network"
 			try:
@@ -457,7 +582,172 @@ def transferModule(self):
 		
 	##############################################################################################################################################
 	
-	#def moveOneDrive(finalPackage, locationText):
+	def moveGoogleDrive(finalPackage, locationText, accessionNumber):
+		#login to GoogleDrive
+		
+		#copy SIP to destination
+		try:
+			self.progressMsg = self.progressMsgRoot + "Authenticating with GoogleDrive..."
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while starting GoogleDrive transfer. Reached " + str(self.progressCount) + " of " + str(progressGoal))
+			
+			try:
+				shutil.copy2(resource_path("data.json"), os.path.join(os.getcwd(), "client_secrets.json"))
+			except:
+				raise ValueError("Client error, might be a permissions issue. Please consult your archivist.")
+				
+			#Google Drive login
+			def googleLogin(googlePath, gauth, t_stop):
+				# Try to load saved client credentials
+				gauth.LoadCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+				if gauth.credentials is None:
+					# Authenticate if they're not there
+					gauth.LocalWebserverAuth()
+				elif gauth.access_token_expired:
+					# Refresh them if expired
+					gauth.Refresh()
+				else:
+					# Initialize the saved creds
+					gauth.Authorize()
+				# Save the current credentials to a file
+				gauth.SaveCredentialsFile(os.path.join(self.appData, "gcreds.txt"))
+				self.drive = GoogleDrive(gauth)			
+				self.childFrame.Destroy()
+			
+			gauth = GoogleAuth()
+			self.t_stop= threading.Event()
+			t = threading.Thread(name="GoogleLogin", target=googleLogin, args=(locationText, gauth, self.t_stop))
+			t.start()
+			self.childFrame = gui.loginFrame(self)
+			self.childFrame.ShowModal()
+			
+			self.progressMsg = self.progressMsgRoot + "Transferring records with GoogleDrive...\nTransfer may take some time..."
+			self.progressCount = self.progressCount + 1
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+					os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+				raise ValueError("Failed update progress bar while making GoogleDrive transfer. Reached " + str(self.progressCount) + " of " + str(progressGoal))
+			
+			try:
+				pathList = locationText.split("/")
+				if pathList < 1:
+					#no subfolders
+					
+					#check if finalPackage already exists in transfer location, add UUID to prevent collisions
+					check_list = self.drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+					collision = False
+					for folder in check_list:
+						if folder["title"] == os.path.basename(finalPackage):
+							collision = True
+					if collision == True:
+						transferDir = os.path.dirname(finalPackage)
+						packageName = os.path.basename(finalPackage)
+						overPackage = os.path.join(transferDir, shortuuid.uuid() + packageName)
+						os.rename(os.path.join(transferDir, packageName), overPackage)
+						finalPackage = os.path.join(transferDir, overPackage)
+						
+					#upload finalPackage
+					uploadPackage = self.drive.CreateFile({'title': os.path.basename(finalPackage)})
+					uploadPackage.SetContentFile(finalPackage)
+					uploadPackage.Upload()
+					
+				else:
+					def findSubFolder(pathList, folderId, folderTitle):
+						sub_list = self.drive.ListFile({'q': "'" + folderId + "' in parents and trashed=false"}).GetList()
+						match = False
+						for folder in sub_list:
+							if folder["title"] == pathList[0]:
+								match = True
+								folderId = folder["id"]
+								folderTitle = folder["title"]
+						if match == True:
+							if len(pathList) > 1:
+								del pathList[0]
+								findSubFolder(pathList, folderId, folderTitle)
+							else:
+								print "Found GoogleDrive destination path"
+								self.childFrame.Destroy()
+								return folderId
+						else:
+							print "Google path failed"
+							self.childFrame.Destroy()
+							if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+								os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+							noAuth = wx.MessageDialog(None, 'Google path failed. Login was successful but subfolder ' + folderTitle +  ' was not found.', 'Login Failed', wx.OK | wx.ICON_WARNING)
+							noAuth.ShowModal()
+							return folderId
+					first_list = self.drive.ListFile({'q': "sharedWithMe=True"}).GetList()
+					match = False
+					for folder in first_list:
+						if folder["title"] == pathList[0]:
+							match = True
+							folderId = folder["id"]
+							folderTitle = folder["title"]
+					if match == True:
+						if len(pathList) > 1:
+							del pathList[0]					
+							folderId = findSubFolder(pathList, folderId, folderTitle)
+					
+					#check if finalPackage already exists in transfer location, add UUID to prevent collisions
+					check_list = self.drive.ListFile({'q': "'" + folderId + "' in parents and trashed=false"}).GetList()
+					collision = False
+					for folder in check_list:
+						if folder["title"] == os.path.basename(finalPackage):
+							collision = True
+					if collision == True:
+						transferDir = os.path.dirname(finalPackage)
+						packageName = os.path.basename(finalPackage)
+						overPackage = os.path.join(transferDir, shortuuid.uuid() + packageName)
+						os.rename(os.path.join(transferDir, packageName), overPackage)
+						finalPackage = os.path.join(transferDir, overPackage)
+						
+					#upload finalPackage
+					uploadPackage = self.drive.CreateFile({"parents": [{ "id": folderId}], 'title': os.path.basename(finalPackage)})
+					uploadPackage.SetContentFile(finalPackage)
+					uploadPackage.Upload()
+					
+					if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+						os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+				
+			except:
+				print traceback.format_exc()
+				if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+					os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+				raise ValueError("Login to GoogleDrive failed. Please check settings in the 'Options' tab.")
+
+			self.progressCount = self.progressCount + 1
+			self.progressMsg = self.progressMsgRoot + "Finished transfer of compressed package with GoogleDrive..."
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while transferring compressed package with GoogleDrive. Reached " + str(self.progressCount) + " of " + str(progressGoal))
+		except:
+			exceptMsg = "Failed to transfer bag to destination with GoogleDrive"
+			if os.path.isfile(os.path.join(os.getcwd(), "client_secrets.json")):
+				os.remove(os.path.join(os.getcwd(), "client_secrets.json"))
+			if os.path.isfile(finalPackage):
+				os.remove(finalPackage)
+			try:
+				configXML = os.path.join(self.appData, "config.xml")
+				parser = ET.XMLParser(remove_blank_text=True)
+				configParse = ET.parse(configXML, parser)
+				config = configParse.getroot()
+				if config.find("error").text == "verbose":
+					exceptMsg = exceptMsg + ": " + traceback.format_exc()
+			except:
+				pass
+			raise ValueError(exceptMsg)
+		
 	
 	##############################################################################################################################################
 	
@@ -470,21 +760,35 @@ def transferModule(self):
 					pass				
 				elif os.path.isfile(path):
 					self.progressMsg = self.progressMsgRoot + "Transferring " + item
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar before transferring " + item + "over FTP. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 					
 					ftp.storbinary("STOR " + item, open(path, "rb"), 1024)
 					
 					self.progressCount = self.progressCount + 1
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar after transferring " + item + "over FTP. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 				else:
 					print "error: " + path
 			for item in os.listdir(source):
 				path = os.path.join(source, item)
 				if os.path.isdir(path):
 					self.progressMsg = self.progressMsgRoot + "Transferring " + item
-					self.progressBar.Update(self.progressCount, self.progressMsg)
 					self.progressCount = self.progressCount + 1
-					self.progressBar.Update(self.progressCount, self.progressMsg)
+					try:
+						self.progressBar.Update(self.progressCount, self.progressMsg)
+					except:
+						exceptMsg = traceback.format_exc()
+						print exceptMsg
+						raise ValueError("Failed update progress bar while creating " + item + " in FTP destination. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 					
 					ftp.mkd(item)
 					ftp.cwd(item)
@@ -497,7 +801,12 @@ def transferModule(self):
 	
 		try:
 			self.progressMsg = self.progressMsgRoot + "Transferring to the Archives..."
-			self.progressBar.Update(self.progressCount, self.progressMsg)
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while setting up FTP transfer. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 		
 			#remove ftp:// if present
 			if locationText.lower().startswith("ftp://"):
@@ -569,11 +878,16 @@ def transferModule(self):
 				raise ValueError("Could not detect if package was file or directory.")				
 					
 			self.progressCount = self.progressCount + 1
-			self.progressBar.Update(self.progressCount, self.progressMsg)		
+			try:
+				self.progressBar.Update(self.progressCount, self.progressMsg)
+			except:
+				exceptMsg = traceback.format_exc()
+				print exceptMsg
+				raise ValueError("Failed update progress bar while finalizing FTP transfer. Reached " + str(self.progressCount) + " of " + str(progressGoal))
 		except:
 			ftp.quit()
 			raise ValueError("Failed to transfer bag to destination over FTP.")
-		
+			
 	
 	##############################################################################################################################################
 
@@ -583,6 +897,8 @@ def transferModule(self):
 	dirParse = ET.parse(dirFile, parser)
 	dirXML = dirParse.getroot()
 	
+	exceptMsg = ""
+	
 	#package files in staging area in AppData and make transfer
 	try:
 		packageTest = False
@@ -591,27 +907,26 @@ def transferModule(self):
 			methodText = "network"
 			dirXML.find("profile/method").text = methodText
 			pathTransfer = True
-			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal, extent, extentUnit = packageSIP(pathTransfer, dirXML)
 			packageTest = True
 			moveNetwork(finalPackage, locationText, accessionNumber)
 			
 		elif self.m_radioBox1.GetSelection() == 3:
-			#transfer OneDrive
-			pass
-			#methodText = "onedrive"
-			#dirXML.find("profile/method").text = methodText
-			#pathTransfer = True
-			#finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
-			#packageTest = True
-			#moveOneDrive(finalPackage, locationText, accessionNumber)
+			#transfer Google Drive
+			methodText = "googledrive"
+			dirXML.find("profile/method").text = methodText
+			pathTransfer = False
+			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal, extent, extentUnit = packageSIP(pathTransfer, dirXML)
+			packageTest = True
+			moveGoogleDrive(finalPackage, locationText, accessionNumber)
 			
 		else:
-			#Tranfer FTP
+			#Transfer FTP
 			methodText = "ftp"
 			dirXML.find("profile/method").text = methodText
 			
 			pathTransfer = False
-			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal = packageSIP(pathTransfer, dirXML)
+			finalPackage, locationText, accessionNumber, receiptRoot, progressGoal, extent, extentUnit = packageSIP(pathTransfer, dirXML)
 			packageTest = True
 			moveFTP(self, finalPackage, locationText)
 			
@@ -639,12 +954,79 @@ def transferModule(self):
 			print "didn't reach processGoal, reached " +str(self.progressCount)
 			self.Close()
 			
+		if self.m_radioBox1.GetSelection() == 3:
+			if os.path.isfile(finalPackage):
+				os.remove(finalPackage)
+		
+		#send notification email
+		try:
+			self.progressMsg = self.progressMsgRoot + "Sending notification email..."
+			self.progressBar.Update(self.progressCount, self.progressMsg)
+		except:
+			exceptMsg = traceback.format_exc()
+			print exceptMsg
+			raise ValueError("Failed update progress bar while sending notification email. Reached " + str(self.progressCount) + " of " + str(progressGoal))
+		try:
+			#get email data from config
+			configXML = os.path.join(self.appData, "config.xml")
+			parser = ET.XMLParser(remove_blank_text=True)
+			configParse = ET.parse(configXML, parser)
+			config = configParse.getroot()
+			if config.find("smtpHost").text:
+				smtpHost = config.find("smtpHost").text
+				if config.find("smtpPort").text:
+					smtpPort = int(config.find("smtpPort").text)
+				else:
+					smtpPort = 587
+				if config.find("notificationEmail").text:
+					notificationEmail = config.find("notificationEmail").text
+					if config.find("notificationEmailPw").text:
+						try:
+							pwd = binascii.unhexlify(config.find("notificationEmailPw").text)
+							notificationEmailPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+						except:
+							exceptMsg = traceback.format_exc()
+							print exceptMsg
+							raise ValueError("Failed to read notification email credentials")
+						if config.find("notificationEmailSubject").text:
+							notificationEmailSubject = config.find("notificationEmailSubject").text
+						else:
+							notificationEmailSubject = "ANTS Transfer Notification"
+						if config.find("notifyEmail").text:
+							notifyEmail = config.find("notifyEmail").text
+
+							try:
+								#email notification message
+								notificationMessage = "\r\n".join(["From: " + notificationEmail, "To: " + notifyEmail, "Subject: " + notificationEmailSubject, "", "Successful Transfer from ANTS " + self.antsVersion, "Accession: " + \
+								accessionNumber, "Creator: " + self.readXML(config, "creator"), "CreatorID: " + self.readXML(config, "creatorId"), "Donor: " + self.readXML(config, "donor"), \
+								"Role: " + self.readXML(config, "role"), "Email: " + self.readXML(config, "email"), "Office: " + self.readXML(config, "office"), "Address1: " + self.readXML(config, "address1"), \
+								"Address2: " + self.readXML(config, "address2"), "Address3: " + self.readXML(config, "address3"), "Transfer Method: " + self.readXML(config, "method"), "Destination: " + self.readXML(config, "location"), \
+								"Extent: " + self.humansize(int(extent))])
+								
+								emailObj = smtplib.SMTP(host=smtpHost, port=smtpPort)
+								emailObj.ehlo()
+								emailObj.starttls()
+								emailObj.login(notificationEmail, notificationEmailPw)
+								emailObj.sendmail(notificationEmail, notifyEmail, notificationMessage)
+								emailObj.quit()
+							except:
+								exceptMsg = traceback.format_exc()
+								print exceptMsg
+								raise ValueError("Failed to send notification email")
+		except:
+			exceptMsg = traceback.format_exc()
+			print exceptMsg
+			raise ValueError("Failed to read email notification settings from config.xml")
+			
 		successNotice = wx.MessageDialog(None, 'The transfer has completed. You can examine the files you transferred in the Receipt.', 'Transfer was Successful', wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
 		successNotice.ShowModal()
 	
 	except (Exception, ValueError) as e:
 		#error Dialog that doesn't close ANTS
-		exceptMsg = traceback.format_exc()
+		if len(exceptMsg) > 0:
+			exceptMsg =  exceptMsg + "\n------------------------------------------------------\n" + traceback.format_exc()
+		else:
+			exceptMsg = traceback.format_exc()
 		print exceptMsg
 		errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.utcnow()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
 		file = open(os.path.join(self.appData, "errorLog.txt"), "a")

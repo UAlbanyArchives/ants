@@ -9,7 +9,7 @@ exe = EXE(pyz,
           a.scripts,
 		  a.binaries + [('msvcp100.dll', 'C:\\Windows\\System32\\msvcp100.dll', 'BINARY'), ('msvcr100.dll', 'C:\\Windows\\System32\\msvcr100.dll', 'BINARY')]
 		  if sys.platform == 'win32' else a.binaries,
-		  a.datas + [('A.gif', 'A.gif', 'DATA'), ('ANTS.gif', 'ANTS.gif', 'DATA')],
+		  a.datas + [('A.gif', 'A.gif', 'DATA'), ('ANTS.gif', 'ANTS.gif', 'DATA'), ('data.json', 'data.json', 'DATA')],
           name='ANTS.exe',
           debug=False,
           strip=None,

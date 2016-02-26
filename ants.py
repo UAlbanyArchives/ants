@@ -14,7 +14,7 @@ class spashDialog( wx.Dialog ):
 	
 	def __init__( self ):
 	
-		antsVersion = "0.5 (beta)"
+		self.antsVersion = "0.6 (beta)"
 		
 		systemPass = False
 		if os.name == "nt":
@@ -184,7 +184,7 @@ class spashDialog( wx.Dialog ):
 	def aboutBox(self, event):
 		info = wx.AboutDialogInfo()
 		info.Name = "ANTS: Archives Network Transfer System"
-		info.Version = antsVersion
+		info.Version = self.antsVersion
 		info.Copyright = "(C) 2015-2016 Gregory Wiedeman"
 		info.Description = "ANTS gathers metadata and packages files for transfer to an institutional archives."
 		info.WebSite = ("http://library.albany.edu/archive/universityarchives", "Learn more about ANTS")
@@ -280,6 +280,11 @@ class spashDialog( wx.Dialog ):
 		login = self.enterUser.GetValue()
 		pw = self.enterPassword.GetValue()
 		return login, pw
+		
+	def stopLogin(self, event):
+		print "Google login aborted"
+		self.t_stop.set()
+		self.childFrame.Destroy()
 
 
 ##############################################################################################################################

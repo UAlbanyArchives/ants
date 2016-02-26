@@ -272,13 +272,13 @@ class mainFrame ( wx.Frame ):
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer33 = wx.BoxSizer( wx.HORIZONTAL )
-		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)", u"File Transfer Protocol (FTP) with TLS"]#, u"OneDrive®" ]
+		m_radioBox1Choices = [ u"Network Share", u"File Transfer Protocol (FTP)", u"File Transfer Protocol (FTP) with TLS", u"GoogleDrive" ]
 		self.m_radioBox1 = wx.RadioBox( self.transferTab, wx.ID_ANY, u"Transfer Method", wx.DefaultPosition, wx.DefaultSize, m_radioBox1Choices, 1, wx.RA_SPECIFY_COLS )
 		if configData["transferMethod"].lower() == "ftp":
 			self.m_radioBox1.SetSelection( 1 )
 		elif configData["transferMethod"].lower() == "ftptls":
 			self.m_radioBox1.SetSelection( 2 )
-		elif configData["transferMethod"].lower() == "onedrive":
+		elif configData["transferMethod"].lower() == "googledrive":
 			self.m_radioBox1.SetSelection( 3 )
 		else:
 			self.m_radioBox1.SetSelection( 0 )
@@ -465,5 +465,47 @@ class mainFrame ( wx.Frame ):
 	def closeWindow( self, event ):
 		sys.exit()
 	
+###########################################################################
+## Class loginFrame
+###########################################################################
+
+class loginFrame ( wx.Dialog ):
 	
+	def __init__( self, parent ):
+		wx.Dialog.__init__ ( self, None, id = wx.ID_ANY, title = u"Checking Credentials", pos = wx.DefaultPosition, size = wx.Size( 250,175 ), style = wx.DEFAULT_DIALOG_STYLE )
+		
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		
+		bSizer1 = wx.BoxSizer( wx.VERTICAL )
+		
+		bSizer2 = wx.BoxSizer( wx.VERTICAL )
+		
+		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_bitmap2 = wx.StaticBitmap( self, wx.ID_ANY, wx.NullBitmap, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer5.Add( self.m_bitmap2, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		
+		self.m_staticText2 = wx.StaticText( self, wx.ID_ANY, u"Checking your login credentials with Google. Please enter you Google credentials in the browser window if prompted or select 'Cancel.'", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText2.Wrap( 200 )
+		bSizer5.Add( self.m_staticText2, 1, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		
+		
+		bSizer2.Add( bSizer5, 1, wx.EXPAND, 5 )
+		
+		
+		bSizer1.Add( bSizer2, 1, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		
+		self.cancelButton = wx.Button( self, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer1.Add( self.cancelButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+		
+		
+		self.SetSizer( bSizer1 )
+		self.Layout()
+		
+		self.Centre( wx.BOTH )
+		
+		self.cancelButton.Bind( wx.EVT_BUTTON, parent.stopLogin )
+		self.Bind(wx.EVT_CLOSE, parent.stopLogin)
+		
+		#self.ShowModal()
 
