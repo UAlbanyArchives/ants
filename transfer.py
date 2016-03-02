@@ -4,6 +4,7 @@ from ftplib import FTP
 from ftplib import FTP_TLS
 import os
 import traceback
+import uuid
 import shutil
 import time
 import calendar
@@ -37,6 +38,8 @@ def transferModule(self):
 		configParse = ET.parse(configXML, parser)
 		config = configParse.getroot()
 		#adds 1 to accessionCount in config.xml
+		if config.find("accessionCount").text is None:
+			config.find("accessionCount").text = "0"
 		accessionCount = str(int(config.find("accessionCount").text) + 1)
 		config.find("accessionCount").text = accessionCount
 		configString = ET.tostring(config, pretty_print=True)
@@ -68,7 +71,10 @@ def transferModule(self):
 		locationText = self.transferLocInput.GetValue()
 		dirXML.find("profile/location").text = locationText
 		#update accession number from GUI additions
-		updateAccession = creatorIdText + "-" + donorText.replace(" ", "_") + "-" + accessionCount
+		if len(creatorIdText) > 0:
+			updateAccession = creatorIdText + "-" + str(uuid.uuid4())
+		else:
+			updateAccession = str(uuid.uuid4())
 		dirXML.set("number", updateAccession)
 		
 		#check transfer location, ask to create
@@ -977,7 +983,7 @@ def transferModule(self):
 				if config.find("smtpPort").text:
 					smtpPort = int(config.find("smtpPort").text)
 				else:
-					smtpPort = 587
+					smtpPort = "587"
 				if config.find("notificationEmail").text:
 					notificationEmail = config.find("notificationEmail").text
 					if config.find("notificationEmailPw").text:
@@ -1003,7 +1009,7 @@ def transferModule(self):
 								"Address2: " + self.readXML(config, "address2"), "Address3: " + self.readXML(config, "address3"), "Transfer Method: " + self.readXML(config, "method"), "Destination: " + self.readXML(config, "location"), \
 								"Extent: " + self.humansize(int(extent))])
 								
-								emailObj = smtplib.SMTP(host=smtpHost, port=smtpPort)
+								emailObj = smtplib.SMTP(host=str(smtpHost), port=str(smtpPort))
 								emailObj.ehlo()
 								emailObj.starttls()
 								emailObj.login(notificationEmail, notificationEmailPw)

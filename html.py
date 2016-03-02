@@ -91,7 +91,10 @@ def htmlReceipt(self, file, timestamp, config):
 			tdLeft1 = ET.SubElement(trLeft, "td")
 			aLink = ET.SubElement(tdLeft1, "a")
 			aLink.set("href", "#" + number)
-			aLink.text = number
+			if len(number) > 15:
+				aLink.text = number[0:15] + "..."
+			else:
+				aLink.text = number
 			tdLeft2 = ET.SubElement(trLeft, "td")
 			tdLeft2.text = localSubmit
 			
