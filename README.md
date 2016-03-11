@@ -4,7 +4,10 @@ for executables to run without dependencies, see [http://library.albany.edu/arch
 
 ##Project Status
 
-ANTS is offered as an open beta for external testing. Development is ongoing, but near-completion. further documentation will be available soon.
+ANTS is offered as an open beta for external testing. Development is ongoing, but near-completion. further documentation will be available soon. Version 0.6+ includes:
+
+* Support for GoogleDrive transfers from the GUI using the GoogleDrive API
+* Email notifications
 
 ANTS is available publicly primarily as a proof of concept and a tool for experimentation. While we hope to implement ANTS at the University at Albany, SUNY, any external users should plan to require their own development and support.
 
@@ -121,7 +124,7 @@ On this tab you may enter information about the creator of the records and your 
 
 Next, navigate to the "Options" tab to enter information about the transfer process.
 
-![](http://library.albany.edu/libdru/files/images/transferConfig.png)
+![](http://library.albany.edu/libdru/files/images/transferConfig_0.png)
 
 Here you must select a transfer method, location, and credentials. If you wish to receive records from the archives using ANTS, then you will also need to enter a Receive Location. If "Network Share" is selected, ANTS will transfer your records over networked storage and rely on external authentication. If you select this method, ANTS requires a local path (say "C:\Users\username\Desktop") or a UNC path to a file server (say "\\Server\Archives\subfolder). This is where ANTS will output your records as an archival package.
 
@@ -193,9 +196,15 @@ ANTS can be configured remotely if an administrator creates the config.xml file 
       <compress default="true" lock="false">zip</compress>
       <checksum>md5</checksum>
       <receipt>html</receipt>
-      <requestEmail/>
-      <requestSubject/>
+      <requestEmail>reference@archives.com</requestEmail>
+      <requestSubject>This is a reference request from ANTS</requestSubject>
       <requestBody/>
+      <smtpHost>smtp.gmail.com</smtpHost>
+      <smtpPort/>
+      <notificationEmail>DummyNotificationAccount@gmail.com</notificationEmail>
+      <notificationEmailPw>encryptedPW</notificationEmailPw>
+      <notificationEmailSubject>Successful ANTS Transfer!</notificationEmailSubject>
+      <notifyEmail>archivist@archives.com</notifyEmail>
     </antsConfig>
 
 
@@ -306,6 +315,8 @@ Login credentials for FTP and FTP/TLS transfers. When @store is set to "true" th
 
 Password credentials for FTP and FTP/TLS transfers. When @store is set to "true" this can be stored with encryption through the GUI. If field is left empty or @store is set to "false" then user will be prompted for credentials.
 
+Although this password is encrypted, that does not mean it is secure. We recommend treating this password as insecure.
+
 #####```<timeZone>```
 
 + Set number of string options (local, posix, utc)
@@ -361,6 +372,45 @@ Subject of Email Request link within HTML receipt. Lets users request copies of 
 + any string, may be empty
 
 Body of Email Request link within HTML receipt. Lets users request copies of previously transferred records. Request emails will begin with this body, and also contain the accession-level metadata that is listed above, like collection Id, donor, etc., as well as SIP name and the ID for the requested record. Users cannot edit from the GUI.
+
+#####```<smtpHost>```
+
++ any string, may be empty
+
+SMTP Host for sending email notifications after successful transfers. Example could be "smtp.google.com." See [Python's smtpLib documentation](https://docs.python.org/2/library/smtplib.html) for more details. Cannot edit from the GUI.
+
+#####```<smtpPort>```
+
++ port number as string, may be empty
+
+SMTP port number for sending email notifications after successful transfers. If empty, port will be 587. See [Python's smtpLib documentation](https://docs.python.org/2/library/smtplib.html) for more details. Cannot edit from the GUI.
+
+#####```<notificationEmail>```
+
++ any string, may be empty
+
+Used for sending email notifications after successful transfers. This would be the email address that sends the notification email from ANTS, not the email address being notified. This should be either the record creator's email or an account used solely for automated notifications. Cannot edit from the GUI.
+
+
+#####```<notificationEmailPw>```
+
++ any string, may be empty
+
+Password for sending email notifications after successful transfers. This would be the email address that sends the notification email from ANTS, not the email address being notified. This should be either the record creator's email or an account used solely for automated notifications. This string will be encrypted the first time ANTS is run. Cannot edit from the GUI.
+
+Although this password is encrypted, that does not mean it is secure. We recommend treating this account as insecure.
+
+#####```<notificationEmailSubject>```
+
++ any string, may be empty
+
+Subject of email notification sent after successful transfers. Cannot edit from the GUI.
+
+#####```<notifyEmail>```
+
++ any string, may be empty
+
+The email address that will be notified when a successful transfer is made. Typically this is the archivist's email address. Cannot edit from the GUI.
 
 
 #ANTS Submission Information Package (SIP)

@@ -5,7 +5,7 @@ import wx
 import os
 import sys
 import shutil
-import win32crypt
+from Crypto.Cipher import AES
 import binascii
 import wx.lib.wxpTag
 from resource_path import resource_path
@@ -14,7 +14,9 @@ class spashDialog( wx.Dialog ):
 	
 	def __init__( self ):
 	
-		self.antsVersion = "0.6 (beta)"
+		self.antsVersion = "0.61 (beta)"
+		self.phrase1 = ""
+		self.phrase2 = ""
 		
 		systemPass = False
 		if os.name == "nt":
@@ -265,8 +267,9 @@ class spashDialog( wx.Dialog ):
 					except:
 						pass
 				if config.find("pw").attrib["store"].lower() == "true":
-					pwd = win32crypt.CryptProtectData(self.enterPassword.GetValue())
-					config.find('pw').text = binascii.hexlify(pwd)
+					pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+					pwd2 = pwd.encrypt(self.enterPassword.GetValue())
+					config.find('pw').text = binascii.hexlify(pwd2)
 					try:
 						self.passwordInput.SetLabel(self.enterPassword.GetValue())
 					except:

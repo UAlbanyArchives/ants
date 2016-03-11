@@ -16,7 +16,7 @@ import zipfile
 import copy
 import shortuuid
 import smtplib
-import win32crypt
+from Crypto.Cipher import AES
 import binascii
 import threading
 from pydrive.auth import GoogleAuth
@@ -988,8 +988,9 @@ def transferModule(self):
 					notificationEmail = config.find("notificationEmail").text
 					if config.find("notificationEmailPw").text:
 						try:
-							pwd = binascii.unhexlify(config.find("notificationEmailPw").text)
-							notificationEmailPw = win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+							pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+							pwd2 = binascii.unhexlify(config.find("notificationEmailPw").text)
+							notificationEmailPw = pwd.decrypt(pwd2)
 						except:
 							exceptMsg = traceback.format_exc()
 							print exceptMsg

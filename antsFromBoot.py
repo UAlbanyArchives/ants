@@ -5,7 +5,7 @@ import os
 import sys
 import traceback
 import uuid
-import win32crypt
+from Crypto.Cipher import AES
 import binascii
 import shutil
 import time
@@ -31,7 +31,9 @@ class ANTSFrame(gui.mainFrame):
 	#constructor
 	def __init__(self, parent):
 		
-		self.antsVersion = "0.6 (beta)"
+		self.antsVersion = "0.61 (beta)"
+		self.phrase1 = ""
+		self.phrase2 = ""
 		
 		#checks if booted with admin privileges
 		self.adminTest = False
@@ -91,8 +93,9 @@ class ANTSFrame(gui.mainFrame):
 			parser = ET.XMLParser(remove_blank_text=True)
 			configParse = ET.parse(configXML, parser)
 			config = configParse.getroot()
-			if  0 < len(self.readXML(config, "notificationEmailPw")) < 25:
-				emailPwd = win32crypt.CryptProtectData(self.readXML(config, "notificationEmailPw"))
+			if  len(self.readXML(config, "notificationEmailPw")) < 20:
+				pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+				emailPwd = pwd.encrypt(self.readXML(config, "notificationEmailPw"))
 				config.find('notificationEmailPw').text = binascii.hexlify(emailPwd)
 				configXMLString = ET.tostring(config, pretty_print=True)
 				file = open(os.path.join(self.appData, "config.xml"), "w")
@@ -101,8 +104,9 @@ class ANTSFrame(gui.mainFrame):
 			def deCode(value):
 				if len(value) > 0:
 					try:
-						pwd = binascii.unhexlify(value)
-						return win32crypt.CryptUnprotectData(pwd)[1].replace("\x00", "").encode('ascii', 'replace')
+						pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+						pwd2 = binascii.unhexlify(value)
+						return pwd.decrypt(pwd2)
 					except:
 						exceptMsg = traceback.format_exc()
 						self.errorMessage("Error reading password from configuration data. Password must be encrypted and cannot be read from config.xml. An empty password will be substituted.", exceptMsg)
@@ -409,8 +413,9 @@ class ANTSFrame(gui.mainFrame):
 				config.find('transferLocation').text = self.transferLocInput.GetValue()
 				config.find('receiveLocation').text = self.receiveInput.GetValue()
 				if config.find("pw").attrib["store"].lower() == "true":
-					pwd = win32crypt.CryptProtectData(self.passwordInput.GetValue())
-					config.find('pw').text = binascii.hexlify(pwd)
+					pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+					pwd2 = pwd.encrypt(self.passwordInput.GetValue())
+					config.find('pw').text = binascii.hexlify(pwd2)
 				if self.timeZoneOption.GetSelection() == 0:
 					config.find('timeZone').text = "local"
 				elif self.timeZoneOption.GetSelection() == 1:
@@ -637,7 +642,8 @@ class ANTSFrame(gui.mainFrame):
 					except:
 						pass
 				if config.find("pw").attrib["store"].lower() == "true":
-					pwd = win32crypt.CryptProtectData(self.enterPassword.GetValue())
+					pwd = AES.new(self.phrase1, AES.MODE_CFB, self.phrase2)
+					pwd2 = pwd.encrypt(self.enterPassword.GetValue())
 					config.find('pw').text = binascii.hexlify(pwd)
 					try:
 						self.passwordInput.SetLabel(self.enterPassword.GetValue())
