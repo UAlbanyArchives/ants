@@ -2,7 +2,7 @@
 
 for executables to run without dependencies, see [http://library.albany.edu/archive/universityarchives/ants](http://library.albany.edu/archive/universityarchives/ants)
 
-##Project Status
+## Project Status
 
 ANTS is offered as an open beta for external testing. Development is ongoing, but near-completion. further documentation will be available soon. Version 0.6+ includes:
 
@@ -13,7 +13,7 @@ ANTS is available publicly primarily as a proof of concept and a tool for experi
 
 Comments, bug reports, and feature requests are welcome.
 
-##Features
+## Features
 
 * Developed for records creators to describe, package, and transfer unstructured files to a university archives.
 * GUI desktop application, runs on any Windows XP SP2+ and later without any dependencies.
@@ -26,14 +26,14 @@ Comments, bug reports, and feature requests are welcome.
 * Developed for Windows and NTFS filesystems.
 * Can gather local, UTC, or POSIX timestamps.
 
-#Quick Start Guide
+# Quick Start Guide
 ___________
 ANTS runs on a Windows desktop and is designed to package digital records with contextual metadata and transfer them to an institutional archives.
 
-###Requirements
+### Requirements
 ANTS requires Windows XP SP2 or later. It has been tested on Windows 7 and Windows 10.
 
-##Installing ANTS
+## Installing ANTS
 
 ANTS can be set up in three different ways:
 
@@ -81,12 +81,12 @@ Run ANTS.exe to start the program. If you setup ANTS with an installer, a shortc
 
 Select "Browse..." to select the records you want to transfer. ANTS will ask you to elevate privileges to run antsFromBoot.exe. This will enable ANTS to gather detailed about the records that will enable us to demonstrate their authenticity years in the future. If you are unable to provide administrative privileges, you will not be prompted and you can still run ANTS to transfer your records.
 
-#####Opening ANTS from the Context Menu
+##### Opening ANTS from the Context Menu
 If you set up ANTS with the installer and selected the appropriate option, you will be able to access ANTS from your "right-click" menu. Just navigate to the records you want to transfer and right-click on a file or folder and select "Send to the Archives with ANTS." This will open the main window as detailed below.
 
 ![](http://library.albany.edu/libdru/files/images/contextMenu.png)
 
-#####Selecting Records
+##### Selecting Records
 
 Select the directory that contains your records. Keep in mind that ANTS transfers folders, not individual files, so you will not see any files that may be present in the folder you select. You are encouraged to select the folder where you typically store and use your records, instead of organizing or relabeling them. This will help us preserve the authenticity of the records. If there are files in the directory that you do not want to transfer, don't worry, you will be able to omit them later.
 
@@ -96,13 +96,13 @@ Once you select the folder containing the records you want to transfer, ANTS wil
 
 The left side will list every file and folder within the directory you selected. The right side will provide text boxes where you can enter information about you records as you see fit. You can add record descriptions and access concerns for any file or folder in the directory. Just select the item you want to describe on the left and enter information in the boxes on the right. It is assumed that descriptions for folders apply to their contents as well.
 
-#####Describing Records
+##### Describing Records
 
 You do not have to describe every record, instead think of any information that may not be gained from reading the file names, what do you know about these records that isn't shown? If you would like to prevent the transfer of some records, just uncheck the boxes to the left of each item. Unchecking folders also unchecks their contents, and re-checking files also checks their parent folders. 
 
 You can also list any access or information security concerns for each record. This could notify archivists if there is personally identifiable information or other restricted data present. Archivists will not rely on this information, but it may help to let them know you are concerned about certain records. There is also a general "Notes for Archivist" text box which applies to the entire transfer. Here, enter any information that you would like to tell the archivist.
 
-#####Transferring Records
+##### Transferring Records
 
 This assumes that ANTS was configured during installation with a config.xml file. If you did not set up ANTS with config.xml, and this is your first transfer, follow the instructions below that show how to configure ANTS from within the GUI.
 
@@ -114,7 +114,7 @@ ANTS will then gather and package metadata for each of the records your selected
 
 ![](http://library.albany.edu/libdru/files/images/transferSuccess.png)
 
-##Configure ANTS from within the GUI
+## Configure ANTS from within the GUI
 
 If you did not set up ANTS with a config.xml file, you can configure ANTS through the GUI. First open ANTS and browse to the folder you want to transfer as described above. When the main window that displays a list of you files opens, navigate to the "Creator Profile" tab to enter information about the creator of the records.
 
@@ -136,7 +136,7 @@ ANTS also features some custom options which are displayed in the bottom of the 
 
 Also, keep in mind that you can receive files and view or export a receipt from this tab as well. This will be discussed below.
 
-##Viewing Receipt of Transfers and Making Requests
+## Viewing Receipt of Transfers and Making Requests
 
 ANTS keeps a running record of all the files you transfer. This is stored locally on you computer and can be viewed through ANTS or exported. The "View Receipt" button is located on the welcome screen, or in the "Options" tab in the main window.
 
@@ -152,14 +152,14 @@ If you would like to export the receipt, open ANTS, select a folder just to open
 
 ![](http://library.albany.edu/libdru/files/images/exportReceipt.png)
 
-##Receiving Records from the Archives
+## Receiving Records from the Archives
 
 Typically, the archives will notify you outside of ANTS that records you requested can be received through ANTS. When you are ready to receive records, click the "Receive Files" from either the welcome window or the "Options" tab. This assumes that ANTS is configured to receive records, if not follow the configuration instructions above. If there are records available, you will see a window that displays the available files. Check the records you would like to download, and ANTS will ask you where to save the files.
 
 ![](http://library.albany.edu/libdru/files/images/receiveFiles.png)
 
 
-#Configuring ANTS
+# Configuring ANTS
 
 ANTS configuration data is stored in a simple config.xml file located in a user's AppData directory. An example path would be: 
 
@@ -167,11 +167,11 @@ ANTS configuration data is stored in a simple config.xml file located in a user'
 
 The ANTS-Transfer_System directory is created either by the installer or by the first time a user runs ANTS.exe. If config.xml is not found by antsFromBoot.exe when it is launched, an empty configuration file is created.
 
-#####Installing ANTS with Configuration Data
+##### Installing ANTS with Configuration Data
 
 ANTS can be configured remotely if an administrator creates the config.xml file manually. If the setup-ANTS-X.X.exe installer or the ANTS.exe program finds a config.xml file in the same directory, it moves that file into the user's AppData directory that is listed above.
 
-###Example config.xml
+### Example config.xml
 
 
     <antsConfig>
@@ -208,12 +208,12 @@ ANTS can be configured remotely if an administrator creates the config.xml file 
     </antsConfig>
 
 
-###Configuration Elements
+### Configuration Elements
 
-#####```<antsConfig>```
+##### ```<antsConfig>```
 This element is the root of the config.xml file, all of the following elements are contained within this element at a single level. While the order of these elements is ignored by ANTS, it may be important for future updates if new elements are required.
 
-#####```<accessionCount>```
+##### ```<accessionCount>```
 
 + Content Required: any integer as a string, cannot be empty.
 
@@ -221,67 +221,67 @@ This contains an integer as a string which represents a running total of attempt
 
 This number is used to name the ANTS Submission Information Package (SIP). If there is a filename or directory collision because of this, ANTS inserts a 22-character unique string before the SIP name, but does not alter the ```<accessionCount>``` If no metadata is entered, ANTS adds "accession" at the beginning of the SIP name.
 
-#####```<creator>```
+##### ```<creator>```
 
 + any string, may be empty
 
 Creator of the records being transferred. This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<creatorId>```
+##### ```<creatorId>```
 
 + any string, may be empty
 
 Identifier for the creator of the records being transferred. This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI. The Creator ID is used in naming the SIP.
 
-#####```<donor>```
+##### ```<donor>```
 
 + any string, may be empty
 
 Name of the person or entity transferring the records. This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI. The donor is used in naming the SIP.
 
-#####```<role>```
+##### ```<role>```
 
 + any string, may be empty
 
 Role of the donor. May be a title or position. This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<email>```
+##### ```<email>```
 
 + any string, may be empty
 
 Email address of the donor. This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI. The donor email attached to the SIP could be used by the receiving archivist to automate a confirmation message.
 
-#####```<office>```
+##### ```<office>```
 
 + any string, may be empty
 
 Office of the donor, part of the general contact information This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<address1>```
+##### ```<address1>```
 
 + any string, may be empty
 
 First address line, part of the general contact information This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<address2>```
+##### ```<address2>```
 
 + any string, may be empty
 
 Second address line, part of the general contact information This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<address3>```
+##### ```<address3>```
 
 + any string, may be empty
 
 Third address line, part of the general contact information This is part of the accession-level metadata that is added to the SIP. User can edit with the GUI.
 
-#####```<transferMethod>```
+##### ```<transferMethod>```
 
 + Set number of string options (network, ftp, ftptls)
 
 Method that will be used to transfer records to the archives. "network" refers or any filesystem path, local or UNC. Denotes both the transfer and receive transfer methods. User can edit in the GUI with a radio button.
 
-#####```<transferLocation>```
+##### ```<transferLocation>```
 
 + any string, must be valid path or URL
 
@@ -291,7 +291,7 @@ Destination where ANTS will attempt to transfer SIP. For "network" transfers, th
 + \\Archives\triage\collection\destination
 + ftp://www.archives.com/triage/collection/transfer
 
-#####```<receiveLocation>```
+##### ```<receiveLocation>```
 
 + any string, must be valid path or URL
 
@@ -301,14 +301,14 @@ Location of records requested by records creators. For "network" transfers, this
 + \\Archives\triage\collection\requests
 + ftp://www.archives.com/triage/collection/requests
 
-#####```<login store="true">```
+##### ```<login store="true">```
 
 + any string, required for FTP transfers
 + @store has set number of string options ("true", false")
 
 Login credentials for FTP and FTP/TLS transfers. When @store is set to "true" this can be stored without encryption through the GUI. If field is left empty or @store is set to "false" then user will be prompted for credentials.
 
-#####```<pw store="false">```
+##### ```<pw store="false">```
 
 + any string, required for FTP transfers
 + @store has set number of string options ("true", false")
@@ -317,25 +317,25 @@ Password credentials for FTP and FTP/TLS transfers. When @store is set to "true"
 
 Although this password is encrypted, that does not mean it is secure. We recommend treating this password as insecure.
 
-#####```<timeZone>```
+##### ```<timeZone>```
 
 + Set number of string options (local, posix, utc)
 
 Option to select timestamp format/timezone. Format will be documented in the SIP. "local" will use the local timezone of the records creator. "posix" will use Unix POSIX time, or the number of seconds since 1970-01-01. "utc" will use Coordinated Universal Time (essentially Greenwich Mean Time). User can edit with the GUI.
 
-#####```<timestampTool>```
+##### ```<timestampTool>```
 
 + Set number of string options (os.stat, plaso)
 
 Option to the forensic tool used to gather record-events for users without administrative privileges. "os.stat" is much faster and more useful, while "plaso" is included for future experimentation. User can edit with the GUI.
 
-#####```<error>```
+##### ```<error>```
 
 + Set number of string options (minimal, verbose)
 
 Option to select the type of error messages displayed within the GUI. "minimal" is best for typical use, while "verbose" is best for debugging. Verbose output is always printed to the console and stored in an errorLog.txt file in the user's AppData directory. User can edit with the GUI.
 
-#####```<compress default="true" lock="false">```
+##### ```<compress default="true" lock="false">```
 
 + Set number of string options (zip, tar.gz)
 + @default has set number of string options ("true", false")
@@ -343,56 +343,56 @@ Option to select the type of error messages displayed within the GUI. "minimal" 
 
 Option to select compression format User can edit with the GUI. Both use Python's shutil.make_archive function. User can edit in the GUI with a radio button, and for each transfer, with the checkbox next to the "Submit" button. @default sets whether the checkbox is selected by default. When @lock is set to "true" users will not be given the option to compress and all transfers will be compressed. This feature is designed for additional transfer methods which may alter uncompressed files.
 
-#####```<checksum>```
+##### ```<checksum>```
 
 + Set number of string options (md5, sha256)
 
 Option to select the checksum algorithm used by Bag-it to hash files. User can edit in the GUI with a radio button.
 
-#####```<receipt>```
+##### ```<receipt>```
 
 + Set number of string options (html, csv, xml)
 
 Option to select the format ANTS will use to both display and export the receipt of all transferred records. "html" produces a Bootstrap HTML document, "csv" produces a flat listing of all the records transferred without accession metadata, "xml" produces all of ANTS receipt information in its native format.
 
-#####```<requestEmail>```
+##### ```<requestEmail>```
 
 + any string, may be empty
 
 Populates Email Request link within HTML receipt. Lets users request copies of previously transferred records. Users cannot edit from the GUI.
 
-#####```<requestSubject>```
+##### ```<requestSubject>```
 
 + any string, may be empty
 
 Subject of Email Request link within HTML receipt. Lets users request copies of previously transferred records. Request emails will have this subject. Users cannot edit from the GUI.
 
-#####```<requestBody>```
+##### ```<requestBody>```
 
 + any string, may be empty
 
 Body of Email Request link within HTML receipt. Lets users request copies of previously transferred records. Request emails will begin with this body, and also contain the accession-level metadata that is listed above, like collection Id, donor, etc., as well as SIP name and the ID for the requested record. Users cannot edit from the GUI.
 
-#####```<smtpHost>```
+##### ```<smtpHost>```
 
 + any string, may be empty
 
 SMTP Host for sending email notifications after successful transfers. Example could be "smtp.google.com." See [Python's smtpLib documentation](https://docs.python.org/2/library/smtplib.html) for more details. Cannot edit from the GUI.
 
-#####```<smtpPort>```
+##### ```<smtpPort>```
 
 + port number as string, may be empty
 
 SMTP port number for sending email notifications after successful transfers. If empty, port will be 587. See [Python's smtpLib documentation](https://docs.python.org/2/library/smtplib.html) for more details. Cannot edit from the GUI.
 
-#####```<notificationEmail>```
+##### ```<notificationEmail>```
 
 + any string, may be empty
 
 Used for sending email notifications after successful transfers. This would be the email address that sends the notification email from ANTS, not the email address being notified. This should be either the record creator's email or an account used solely for automated notifications. Cannot edit from the GUI.
 
 
-#####```<notificationEmailPw>```
+##### ```<notificationEmailPw>```
 
 + any string, may be empty
 
@@ -400,20 +400,20 @@ Password for sending email notifications after successful transfers. This would 
 
 Although this password is encrypted, that does not mean it is secure. We recommend treating this account as insecure.
 
-#####```<notificationEmailSubject>```
+##### ```<notificationEmailSubject>```
 
 + any string, may be empty
 
 Subject of email notification sent after successful transfers. Cannot edit from the GUI.
 
-#####```<notifyEmail>```
+##### ```<notifyEmail>```
 
 + any string, may be empty
 
 The email address that will be notified when a successful transfer is made. Typically this is the archivist's email address. Cannot edit from the GUI.
 
 
-#ANTS Submission Information Package (SIP)
+# ANTS Submission Information Package (SIP)
 
 ANTS uses the bag-it standard as the basis for its SIP. Here is an example of an accession:
 
